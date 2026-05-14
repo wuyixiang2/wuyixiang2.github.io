@@ -33,7 +33,7 @@
             const savedNickname = localStorage.getItem('userNickname');
             const displayArea = document.getElementById('displayArea');
             if (savedNickname) {
-                displayArea.innerHTML = '您的注册/登录昵称是：' + savedNickname;
+                displayArea.innerHTML = '' + savedNickname;
                 console.log('已显示昵称：', savedNickname);
             } else {
                 displayArea.innerHTML = 'Anonymous';
