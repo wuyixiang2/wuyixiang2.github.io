@@ -2,6 +2,15 @@
 
 <html>
 
+<style>
+  fixed-box {
+  width: 100px;
+  height: 100px;
+  position: fixed;
+  top: 50px;
+  right: 50px;
+  }
+</style>
 <head>
 
   <meta charset="UTF-8">
@@ -14,11 +23,28 @@
 
   <p><h3><a href="https://www.luogu.com.cn/user/703022">wuyixiang 的网站</a></h3><br>
 
+    <div id="displayArea" class="fixed-box">
+        <!-- 这里将显示昵称或提示信息 -->
+    </div>
   <img src="LO3yn.gif" alt="hyw"><br>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedNickname = localStorage.getItem('userNickname');
+            const displayArea = document.getElementById('displayArea');
+            if (savedNickname) {
+                displayArea.innerHTML = '您的注册/登录昵称是：' + savedNickname;
+                console.log('已显示昵称：', savedNickname);
+            } else {
+                displayArea.innerHTML = 'Anonymous';
+            }
+        });
+    </script>
     
   This guy is too lazy that he didn't leave anything.</p>
 
   Want to Login?<a href="/login">Click</a> here.
+
 </body>
 
 </html>
