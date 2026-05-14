@@ -27,7 +27,7 @@
             event.preventDefault();
             const nickname = nicknameInput.value.trim(); 
             if (nickname === '') {
-                alert('请先输入昵称！');
+                alert('You should fill in your nickname first.');
                 return;
             }
             localStorage.setItem('userNickname', nickname);
