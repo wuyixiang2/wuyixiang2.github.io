@@ -14,12 +14,26 @@
 
   <p><h3>Login</h3><br>
 
-  <form action="">
-    Handle:<input type="text" name="user"><br>
+  <form id="loginForm">
+    Handle:<input type="text" name="user" id="nickname"><br>
     Password:<input type="password" name="password"><br>
-    <button>登录</button>
+    <button type="submit">Login</button>
   </form>
   <br>
+  <script>
+        const form = document.getElementById('loginForm');
+        const nicknameInput = document.getElementById('nickname');
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const nickname = nicknameInput.value.trim(); 
+            if (nickname === '') {
+                alert('请先输入昵称！');
+                return;
+            }
+            localStorage.setItem('userNickname', nickname);
+            window.location.href = '/';
+        });
+    </script>
   No account? 找liruixiong0101</p>
 
 </body>
