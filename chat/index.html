@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>chatroom</title>
+  <style>
+    /* 极简重置，仅保证功能可见 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    #message-container {
+      background: white;
+      border: 1px solid #ccc;
+      height: 65vh;
+      overflow-y: auto;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .message-item {
+      border-bottom: 1px solid #eee;
+      padding: 6px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      font-size: 15px;
+    }
+    .message-user {
+      font-weight: bold;
+      color: #0b5e7c;
+      margin-right: 12px;
+    }
+    /* Anonymous 用户使用灰色，以示区分（非美化，仅功能性区分） */
+    .message-user.anonymous {
+      color: #6c757d;
+      font-weight: normal;
+    }
+    .message-time {
+      color: #6c757d;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .message-text {
+      width: 100%;
+      margin-top: 2px;
+      word-break: break-word;
+      color: #1e293b;
+    }
+    #input-area {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    #msg-input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 15px;
+      min-width: 150px;
+    }
+    #send-btn {
+      padding: 8px 18px;
+      background: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    #send-btn:hover {
+      background: #0b5ed7;
+    }
+    .empty-tip {
+      color: #6c757d;
+      text-align: center;
+      padding: 30px 0;
+    }
+    /* 当前身份提示（极简文字，无美化） */
+    #identity-hint {
+      font-size: 14px;
+      color: #495057;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="identity-hint"></div>   <!-- 显示当前聊天身份 -->
+  <div id="message-container">
+    <!-- 消息会动态渲染到这里 -->
+  </div>
+  <div id="input-area">
+    <input type="text" id="msg-input" placeholder="输入聊天内容..." />
+    <button id="send-btn">发送</button>
+  </div>
+  <script>
+    (function() {
+      const STORAGE_KEY = 'chatroom_messages';
+      const MAX_MESSAGES = 5000;  
+      const container = document.getElementById('message-container');
+      const input = document.getElementById('msg-input');
+      const sendBtn = document.getElementById('send-btn');
+      const identityHint = document.getElementById('identity-hint');
+      function getCurrentUser() {
+        const nickname = localStorage.getItem('userNickname');
+        // 如果有昵称且不是空字符串，使用它；否则返回 'Anonymous'
+        if (nickname && nickname.trim() !== '') {
+          return nickname.trim();
+        }
+        return 'Anonymous';
+      }
+      function loadMessages() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+          }
+        } catch (e) {
+          console.warn('reading failed');
+        }
+        return [];
+      }
+      function saveMessages(messages) {
+        if (messages.length > MAX_MESSAGES) {
+          messages = messages.slice(-MAX_MESSAGES);
+        }
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        } catch (e) {
+          console.warn('存储消息失败:', e);
+        }
+      }
+      function renderMessages() {
+        const messages = loadMessages();
+        container.innerHTML = '';
+        if (messages.length === 0) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'empty-tip';
+          emptyDiv.textContent = 'No message here';
+          container.appendChild(emptyDiv);
+          return;
+        }
+        messages.forEach(msg => {
+          const item = document.createElement('div');
+          item.className = 'message-item';
+          const userSpan = document.createElement('span');
+          userSpan.className = 'message-user';
+          const userName = msg.user || 'Anonymous';
+          userSpan.textContent = userName;
+          if (userName === 'Anonymous') {
+            userSpan.classList.add('anonymous');
+          }
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'message-time';
+          let timeStr = '未知时间';
+          if (msg.time) {
+            try {
+              const date = new Date(msg.time);
+              if (!isNaN(date.getTime())) {
+                timeStr = date.toLocaleString('zh-CN', { hour12: false });
+              }
+            } catch (e) {}
+          }
+          timeSpan.textContent = timeStr;
+          const textDiv = document.createElement('div');
+          textDiv.className = 'message-text';
+          textDiv.textContent = msg.text || '';
+          item.appendChild(userSpan);
+          item.appendChild(timeSpan);
+          item.appendChild(textDiv);
+          container.appendChild(item);
+        });
+        container.scrollTop = container.scrollHeight;
+      }
+      function updateIdentityHint() {
+        const user = getCurrentUser();
+        identityHint.textContent = '当前身份：' + user;
+      }
+      function sendMessage() {
+        const text = input.value.trim();
+        if (text === '') {
+          alert('请输入内容再发送');
+          return;
+        }
+        const user = getCurrentUser();
+        const now = new Date().toISOString();
+        const messages = loadMessages();
+        messages.push({
+          user: user,
+          text: text,
+          time: now
+        });
+        saveMessages(messages);
+        input.value = '';
+        renderMessages();
+        updateIdentityHint();
+        input.focus();
+      }
+      function init() {
+        updateIdentityHint();
+        renderMessages();
+
+        sendBtn.addEventListener('click', sendMessage);
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+
+</body>
+</html>
