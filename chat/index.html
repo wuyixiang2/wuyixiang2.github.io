@@ -102,8 +102,8 @@
     <!-- 消息会动态渲染到这里 -->
   </div>
   <div id="input-area">
-    <input type="text" id="msg-input" placeholder="输入聊天内容..." />
-    <button id="send-btn">发送</button>
+    <input type="text" id="msg-input" placeholder="Input your messages here..." />
+    <button id="send-btn">Send</button>
   </div>
   <script>
     (function() {
@@ -115,7 +115,6 @@
       const identityHint = document.getElementById('identity-hint');
       function getCurrentUser() {
         const nickname = localStorage.getItem('userNickname');
-        // 如果有昵称且不是空字符串，使用它；否则返回 'Anonymous'
         if (nickname && nickname.trim() !== '') {
           return nickname.trim();
         }
@@ -187,12 +186,12 @@
       }
       function updateIdentityHint() {
         const user = getCurrentUser();
-        identityHint.textContent = '当前身份：' + user;
+        identityHint.textContent = 'Your name:' + user;
       }
       function sendMessage() {
         const text = input.value.trim();
         if (text === '') {
-          alert('请输入内容再发送');
+          alert('Can't send an empty message');
           return;
         }
         const user = getCurrentUser();
