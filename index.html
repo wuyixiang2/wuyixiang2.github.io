@@ -4,8 +4,8 @@
 
 <style>
   .fixed-box {
-  width: 100px;
-  height: 100px;
+  width: auto;
+  height: auto;
   position: fixed;
   top: 10px;
   right: 50px;
@@ -13,7 +13,7 @@
     #logoutBtn {
       background: transparent;
       border: none;
-      color: white;
+      color: black;
       text-decoration: underline;
       cursor: pointer;
       font-size: 14px;
@@ -30,8 +30,6 @@
 
 <body>
   <div id="displayArea" class="fixed-box">
-        <!-- 这里将显示昵称或提示信息 -->
-    <div id="displayArea"></div>      <!-- 昵称 -->
     <button id="logoutBtn">Log out</button>
   </div>
   <p><h3><a href="https://www.luogu.com.cn/user/703022">wuyixiang 的网站</a></h3><br>
@@ -41,6 +39,7 @@
         window.addEventListener('DOMContentLoaded', function() {
             const savedNickname = localStorage.getItem('userNickname');
             const displayArea = document.getElementById('displayArea');
+            const logoutBtn = document.getElementById('logoutBtn');
             if (savedNickname) {
                 displayArea.innerHTML = '' + savedNickname;
                 logoutBtn.style.display = 'inline-block';
