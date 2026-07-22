@@ -10,6 +10,15 @@
   top: 10px;
   right: 50px;
   }
+    #logoutBtn {
+      background: transparent;
+      border: none;
+      color: white;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0;
+    }
 </style>
 <head>
 
@@ -22,9 +31,11 @@
 <body>
   <div id="displayArea" class="fixed-box">
         <!-- 这里将显示昵称或提示信息 -->
+    <div id="displayArea"></div>      <!-- 昵称 -->
+    <button id="logoutBtn">Log out</button>
   </div>
   <p><h3><a href="https://www.luogu.com.cn/user/703022">wuyixiang 的网站</a></h3><br>
-  <img src="LO3yn.gif" alt="hyw"><br>
+  <!--<img src="LO3yn.gif" alt="hyw"><br>-->
 
     <script>
         window.addEventListener('DOMContentLoaded', function() {
@@ -32,9 +43,11 @@
             const displayArea = document.getElementById('displayArea');
             if (savedNickname) {
                 displayArea.innerHTML = '' + savedNickname;
+                logoutBtn.style.display = 'inline-block';
                 console.log('已显示昵称：', savedNickname);
             } else {
                 displayArea.innerHTML = 'Anonymous';
+                logoutBtn.style.display = 'none';
             }
         });
     </script>
