@@ -134,18 +134,9 @@ function buildPageHtml(id, code, title) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
   <script src="markdown-it.min.js"><\/script>
-  <script>
-  window.MathJax = {
-    tex: {
-      inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-      displayMath: [['$$', '$$']]
-    },
-    options: {
-      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-    }
-  };
-<\/script>
-  <script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml-full.js"><\/script>
+ <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -266,13 +257,23 @@ function buildPageHtml(id, code, title) {
       }
 
       function tryMathJax() {
-        if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
-          MathJax.typesetPromise([contentEl]).catch(function(err) {
-            console.error('[MathJax] error:', err);
-          });
+        if (typeof renderMathInElement === 'function') {
+          try {
+            renderMathInElement(contentEl, {
+              delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+              ],
+              throwOnError: false
+            });
+          } catch (err) {
+            console.error('[KaTeX] error:', err);
+          }
         } else if (mathRetries < 30) {
           mathRetries++;
           setTimeout(tryMathJax, 200);
+        } else {
+          console.warn('[KaTeX] not ready after 6s');
         }
       }
 
