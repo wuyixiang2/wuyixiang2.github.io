@@ -187,6 +187,37 @@ function buildPageHtml(id, code, title) {
       line-height: 1.6;
     }
     #markdown-content pre { border: 1px solid #eee; }
+    #markdown-content blockquote {
+      border-left: 4px solid #ccc;
+      padding-left: 12px;
+      margin: 8px 0;
+      color: #495057;
+    }
+    #markdown-content p {
+      margin: 6px 0;
+    }
+    #markdown-content h1,
+    #markdown-content h2,
+    #markdown-content h3,
+    #markdown-content h4 {
+      margin: 12px 0 6px 0;
+    }
+    #markdown-content ul,
+    #markdown-content ol {
+      margin: 6px 0;
+      padding-left: 24px;
+    }
+    #markdown-content code {
+      background: #f1f3f5;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 0.95em;
+    }
+    #markdown-content pre code {
+      background: transparent;
+      padding: 0;
+    }
   </style>
 </head>
 <body>
@@ -222,36 +253,36 @@ function buildPageHtml(id, code, title) {
           contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 markdown-it.min.js</p>';
           return;
         }
-
+      
         var text = rawText;
         var mathStore = [];
-
-        text = text.replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, function(match) {
+      
+        // 只保护行内公式 $...$（不跨行）
+        text = text.replace(/\$([^$\n]+?)\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
-        text = text.replace(/\\$([^\\$\\n]+?)\\$/g, function(match) {
-          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
-          mathStore.push(match);
-          return key;
-        });
-
+      
         var md = markdownit({ html: false, linkify: true, breaks: false });
         var html = md.render(text);
-
-        html = html.replace(/MATHPLACEHOLDER(\\d+)END/g, function(match, idx) {
+      
+        // 把占位符换回原始公式
+        html = html.replace(/MATHPLACEHOLDER(\d+)END/g, function(match, idx) {
           return mathStore[parseInt(idx, 10)];
         });
-
+      
+        // 关键修复：两个相邻公式之间的 $$ 用一个空格隔开，避免被 KaTeX 当作块级公式
+        html = html.replace(/\$\$/g, '$ $');
+      
         contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
-
+      
         if (typeof hljs !== 'undefined') {
           document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
             hljs.highlightElement(block);
           });
         }
-
+      
         mathRetries = 0;
         tryMathJax();
       }
@@ -261,7 +292,6 @@ function buildPageHtml(id, code, title) {
           try {
             renderMathInElement(contentEl, {
               delimiters: [
-                {left: '$$', right: '$$', display: true},
                 {left: '$', right: '$', display: false}
               ],
               throwOnError: false
