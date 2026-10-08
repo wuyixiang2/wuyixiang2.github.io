@@ -239,48 +239,50 @@
     document.getElementById('previewBtn').addEventListener('click', function() {
       const id = document.getElementById('pasteId').value.trim() || 'preview';
       const code = document.getElementById('codeInput').value;
+      const title = document.getElementById('pageTitle').value.trim();   // 新增
+
       if (!code) { setStatus('请先输入代码', 'err'); return; }
-      const html = buildPageHtml(id, code);
+      const html = buildPageHtml(id, code, title);                       // 传入 title
       const w = window.open('', '_blank');
       w.document.open();
       w.document.write(html);
       w.document.close();
     });
-
     // 生成并上传
     document.getElementById('submitBtn').addEventListener('click', async function() {
-      const id = document.getElementById('pasteId').value.trim();
-      const code = document.getElementById('codeInput').value;
-      const cfg = loadConfig();
+    const id = document.getElementById('pasteId').value.trim();
+    const code = document.getElementById('codeInput').value;
+    const title = document.getElementById('pageTitle').value.trim();   // 新增
+    const cfg = loadConfig();
 
-      if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
-        setStatus('编号不能为空，且只能包含字母、数字、下划线、短横线', 'err');
-        return;
-      }
-      if (!code) { setStatus('请输入代码内容', 'err'); return; }
-      if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
-        setStatus('请先在“GitHub 设置”中填写并保存配置', 'err');
-        document.getElementById('settingsPanel').open = true;
-        return;
-      }
+    if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
+      setStatus('编号不能为空，且只能包含字母、数字、下划线、短横线', 'err');
+      return;
+    }
+    if (!code) { setStatus('请输入代码内容', 'err'); return; }
+    if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+      setStatus('请先在“GitHub 设置”中填写并保存配置', 'err');
+      document.getElementById('settingsPanel').open = true;
+      return;
+    }
 
-      this.disabled = true;
-      setStatus('正在生成并上传...');
+    this.disabled = true;
+    setStatus('正在生成并上传...');
 
-      try {
-        const html = buildPageHtml(id, code);
-        const path = `paste/${id}/index.html`;
-        await uploadToGitHub(cfg, path, html, `Add paste ${id}`);
-        setStatus(
-          '上传成功！\n' +
-          'GitHub Pages 通常 1–2 分钟后生效。\n' +
-          '访问地址：https://paste.aaa.com/' + id
-        , 'ok');
-      } catch (e) {
-        setStatus('出错：' + e.message, 'err');
-      } finally {
-        this.disabled = false;
-      }
+    try {
+      const html = buildPageHtml(id, code, title);   // 传入 title
+      const path = `paste/${id}/index.html`;
+      await uploadToGitHub(cfg, path, html, `Add paste ${id}`);
+      setStatus(
+        '上传成功！\n' +
+        'GitHub Pages 通常 1–2 分钟后生效。\n' +
+        '访问地址：https://paste.aaa.com/' + id
+      , 'ok');
+    } catch (e) {
+      setStatus('出错：' + e.message, 'err');
+    } finally {
+      this.disabled = false;
+    }
     });
 
     // 初始化
