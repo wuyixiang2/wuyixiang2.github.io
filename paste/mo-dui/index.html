@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/paste/">   <!-- 新增：固定基础路径 -->
+  <title>莫队 学习笔记</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="markdown-it.min.js"></script>
+  <script>
+    MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+  </script>
+  <script id="MathJax-script" async src="tex-mml-chtml.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    #mode-switcher {
+      position: fixed;
+      top: 10px;
+      right: 50px;
+      z-index: 9999;
+    }
+    #mode-switcher button {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    #mode-switcher button.active {
+      background: #0d6efd;
+      color: white;
+      border-color: #0d6efd;
+    }
+    pre {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+      tab-size: 4;
+    }
+    code { font-family: inherit; }
+    #markdown-content {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    #markdown-content pre { border: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div id="mode-switcher">
+    <button data-mode="cpp" class="active">.cpp</button>
+    <button data-mode="markdown">markdown(LaTeX)</button>
+  </div>
+
+  <div id="content"></div>
+
+  <script>var RAW_CODE = "## 说在前面\n\n由于这是自己搭建的网站所以 $\\LaTeX$ 有点炸飞了，因此建议还是把源代码复制下来到博客园查看 ~~或者直接到博客园查看，博客园[链接](https://www.cnblogs.com/wuyixiang2/p/21175952)。~~\n\n2026.7.6 终于把各种莫队全部学完了，特此来写个学习笔记。\n\n## 莫队\n\n~~高级的暴力算法~~\n\n莫队是一种根号复杂度的离线算法，适用于区间  $[l,r]$ 的答案可以向 $[l + 1,r]$，$[l - 1,r]$，$[l,r-1]$，$[l,r+1]$ 转移的情况。一般来说这个转移的复杂度不会太高，但是如果很高也有办法——使用莫队二次离线（这个我们之后会讲）。\n\n### 普通莫队\n莫队的模板题是这样的：\n> 例1-1\n> \n> **[P2709](https://www.luogu.com.cn/problem/P2709)** 给定一个长度为 $n$ 的序列 $a$，$m$ 次询问，每次询问给出两个整数 $l,r$，求 $\\sum\\limits_{i=1}^k c_i^2$ 的值，其中 $c_i$ 表示数字 $i$ 在 $[l,r]$ 中的出现次数。\n>\n>  $n,m \\le 5 \\times 10^4$（后面数据加强到 $10^5$ 以防止暴力卡过）\n\n我们有常规暴力算法：\n\n对于每次询问，直接用桶来存储每个数出现的次数，然后遍历整个桶来求出出现次数的平方，复杂度 $\\mathcal{O}(nm + nV)$，其中 $V$ 为数字的值域。\n\n使用离散化可以优化到 $\\mathcal{O}(nm)$，但是也有一种不使用离散化也是这个复杂度的做法：我们往桶里存数的时候直接将原有的贡献删除，加上新贡献就行了，不需要后面再遍历一遍桶。\n\n但无论哪种暴力都最多只能 $\\mathcal{O}(nm)$ 了。有没有一种更加优秀的做法呢？\n\n你发现我们的暴力做法都是在线的，而本题支持离线。这说明，我们不按照询问给定的顺序来输出答案，将询问排个序，算出答案后再排回来也是可行的。排序有什么作用呢？\n\n对于当前枚举的区间 $[l_{now},r_{now}]$，设上一个枚举的区间是 $[l_{last},r_{last}]$，我们只需要按照上面暴力的方法，移动 $l$ 指针和 $r$ 指针，删除旧贡献，增加新贡献，就能得到答案了。这样，我们只需要 $|l_{now} - l_{last}| + |r_{now} - r_{last}|$ 次操作就完成了转移。\n\n但是如果不排序还是会超时的，我们需要在排序这一方面动点小心思，使得两个指针的移动总次数在可接受范围之内。\n\n莫涛给出了一个很好的方法：使用分块！\n\n如何实现呢？他的做法是：设置一个常数 $B$，按照每个区间 $\\left\\lfloor\\dfrac{l}{B}\\right\\rfloor$ 的大小从小到大排序，如果相同，则按 $r$ 的大小从小到大排序。\n\n什么意思呢？就是下面的这张图：\n\n![2026-07-06 17-18-36屏幕截图](https://img2024.cnblogs.com/blog/3340442/202607/3340442-20260706172224575-1813810568.png)\n\n每个颜色的 $\\left\\lfloor\\dfrac{l}{B}\\right\\rfloor$ 大小相同。这里，颜色数叫做块数，而 $B$ 就叫做块长。\n\n那么在一个颜色内，移动左端点最多 $B$ 次操作，又左端点总体大体呈升序排序，所以总共大约移动 $mB$ 次操作；在相同颜色内移动右端点总共不超过 $n \\times $ 颜色数 次操作（因为一个颜色内右端点已经有序）。因为颜色数最多为 $\\dfrac{n}{B}$ 个，所以右指针移动次数移动次数最多 $2 \\times \\dfrac{n^2}{B}$ 次。注意带 $2$ 的常数的原因是右端点从一个颜色移动到另一个颜色时最环需要移动 $n$ 次，乘上颜色数同样为 $\\dfrac{n^2}{B}$。但由于 $2$ 是常数，后面分析复杂度时我们将它舍去。\n\n于是总和为 $mB + \\dfrac{n^2}{B}$。这就是我们高中经常会用到的基本不等式了，$mB + \\dfrac{n^2}{B} \\ge 2 \\sqrt{mB \\times  \\dfrac{n^2}{B}} = 2n\\sqrt{m}$，当且仅当 $mB = \\dfrac{n^2}{B}$ 时取等号。所以理论估计，当 $B = \\dfrac{n}{\\sqrt{m}}$ 时，取得最优复杂度 $\\mathcal{O}(n \\sqrt{m})$。\n\n但其实上面的过程大家不需要记，只需要知道 $B$ 近似取 $\\sqrt{n}$ 即可，因为绝大部分情况 $n,m$ 同阶。虽然会有常数因子影响使得最优的 $B$ 会左右波动，但是只要出题人不卡是可以过的。\n\n那么接下来就是代码细节了，~~但其实这道题很板没有什么要说的~~，主要看两个函数:\n\n$$\\text{add(x)}\\,\\&\\,\\text{del(x)}$$\n\n其实一个函数就是加上位置 $x$ 的贡献，还有一个函数就是减去位置 $x$ 的贡献。\n\n但注意加上贡献时需要先移动到产生贡献的下标再进行 $\\text{add(x)}$ 操作，减去贡献时需要先减去该下标的贡献再移动指针。其实就是 $\\text{add(}\\small{+\\!+}$$\\text{x)}$ 和 $\\text{del(x}\\small{+\\!+}$$\\text{)}$ 的区别。大家都知道为什么吧。因为增加的贡献不在以前的区间内，而减去的贡献在以前的区间内。\n\n下面是这道题的代码。\n\n```cpp\n#include <iostream>\n#include <cmath>\n#include <algorithm>\n#define int long long\nusing namespace std;\nint n,m,k,B,a[100005],l = 1,r,cnt[100005],ans[100005],sum;//cnt:桶\nstruct node\n{\n\tint x,y,id;\n}b[100005];\nbool cmp(node e,node f)//按x/B从小到大为第一关键字，y从小到大为第二关键字排序\n{\n    if(e.x / B != f.x / B)return e.x < f.x;\n\treturn e.y < f.y;\n}\nvoid add(int x)\n{//加上新贡献，减去旧贡献（cnt[a[x]] - 1 的平方）\n    cnt[a[x]] ++,sum += cnt[a[x]] * cnt[a[x]] - (cnt[a[x]] - 1) * (cnt[a[x]] - 1);\n}\nvoid del(int x)\n{\n    cnt[a[x]] --,sum -= (cnt[a[x]] + 1) * (cnt[a[x]] + 1) - cnt[a[x]] * cnt[a[x]];\n}\nsigned main()\n{\n\tcin >> n >> m >> k;B = sqrt(n);\n\tfor(int i = 1;i <= n;i ++)cin >> a[i];\n\tfor(int i = 1;i <= m;i ++)\n\t{\n\t\tcin >> b[i].x >> b[i].y;\n\t\tb[i].id = i;//记录询问编号\n\t}\n\tsort(b + 1,b + m + 1,cmp);\n\tfor(int i = 1;i <= m;i ++)\n\t{//l,r:上一个询问的区间。初始时该区间为空，可设置为[1,0]\n\t\twhile(r < b[i].y)add(++r);//加入贡献\n        while(l > b[i].x)add(--l);\n\t\twhile(r > b[i].y)del(r--);//删除贡献\n\t\twhile(l < b[i].x)del(l++);\n\t\tans[b[i].id] = sum;//顺序输出答案\n\t}\n\tfor(int i = 1;i <= m;i ++)cout << ans[i] << '\\n';\n}\n```\n\n其实排序不一定非得是这个排序方法，还有一种奇偶交替排序法，会比这种排序端点移动次数更少，但少的不多，为了理解还是推荐大家按照上面的排序方法排序。\n\n虽然说这只是最基础的莫队，但是也能做很多偏难的题了。接下来我们来看几道例题。\n\n> 例1-2\n> \n> **[P1494](https://www.luogu.com.cn/problem/P1494)** 给定一个长度为 $n$ 的序列 $a$，$m$ 次询问，每次询问给出两个整数 $l,r$，求从这段区间内随机选两个数相同的概率。\n>\n>  $n,m \\le 5 \\times 10^4,a_i \\le n$\n\n这道题其实就是原模板的变形。因为选两个数的总方案数是容易求的，所以只需要求设我们新增加了一个点 $x$，那么它造成的贡献和桶中有多少个数有关。根据等差数列求和可知，若桶中有 $c$ 个相同的数，那么选两个数均为这个数的方案数为 $\\dfrac{c \\times (c - 1)}{2}$。直接维护即可。\n\n由于就是之前模板的变形，就不贴代码了。~~实际上是我原来的码风超级丑~~\n\n> 例1-3\n> \n> **[P4462](https://www.luogu.com.cn/problem/P4462)** 给定一个长度为 $n$ 的序列 $a$，$m$ 次询问，每次询问给出两个整数 $l,r$，求选出两个数 $x,y$ 满足 $l \\le x \\le y \\le r$ 的方案数，满足 $a_x \\oplus a_{x+1} \\oplus \\dots \\oplus a_y = k$。\n>\n>  $n,m,k,a_i \\le 10^5$\n\n这道题需要一个变形：大量求区间的异或和显然是会超时的，可以类比前缀和的思想，令 $qian_i = a_1 \\oplus a_{2} \\oplus \\dots \\oplus a_i$，那么  $a_x \\oplus a_{x+1} \\oplus \\dots \\oplus a_y = qian_y \\oplus qian_{x - 1}$。那么这道题的询问就可以变成：求选出两个数 $x,y$ 满足 $l\\,{\\color{red}{-1}} \\le x \\le y \\le r$ 的方案数，满足 $qian_x \\oplus qian_y = k$。\n\n那这道题不就特别水了吗，用一个桶来存储区间内出现的数，每新加一个点 $x$ 时，$k \\oplus x$ 在桶里出现的次数即为 $x$ 对答案的贡献。删除同理。\n\n提醒：此题需要开 `long long`。\n\n```cpp\n#include <iostream>\n#include <algorithm>\n#include <cmath>\n#define int long long\nusing namespace std;\nint n,m,p[200005],block[100006],ans[100006],sum,k;\nint a[671089];\nstruct node\n{\n\tint u,v,id;\n}q[100005];\nbool cmp(node e,node f)\n{\n\tif(block[e.u] != block[f.u])return block[e.u] < block[f.u];\n\treturn e.v < f.v;\n}\nvoid add(int x)\n{\n\tsum += a[k ^ p[x]];\n\ta[p[x]] ++;\n}\nvoid del(int x)\n{\n\ta[p[x]] --;\n\tsum -= a[k ^ p[x]];\n}\nsigned main()\n{\n\tcin >> n >> m >> k;\n\tint blocks = sqrt(n + 1);\n\tfor(int i = 0;i <= n;i ++)block[i] = i / blocks + 1;\n\tfor(int i = 1;i <= n;i ++)cin >> p[i],p[i] ^= p[i - 1];\n\tfor(int i = 1;i <= m;i ++)\n\t{\n\t\tcin >> q[i].u >> q[i].v;\n\t\tq[i].u --;\n\t\tq[i].id = i;\n\t}\n\tsort(q + 1,q + m + 1,cmp);\n\tint l = 1,r = 0;\n\t//cout << q[1].u << \" \" << q[1].v << '\\n';\n\tfor(int i = 1;i <= m;i ++)\n\t{\n\t\twhile(r < q[i].v)add(++r);\n\t\twhile(l > q[i].u)add(--l);\n\t\twhile(r > q[i].v)del(r--);\n\t\twhile(l < q[i].u)del(l++);\n\t\tans[q[i].id] = sum;\n\t}\n\tfor(int i = 1;i <= m;i ++)cout << ans[i] << '\\n';\n}\n```\n";</script>
+
+  <script>
+    (function() {
+      var rawText = RAW_CODE;
+      var currentMode = 'cpp';
+      var contentEl = document.getElementById('content');
+
+      function renderCpp() {
+        contentEl.innerHTML = '';
+        var pre = document.createElement('pre');
+        var codeEl = document.createElement('code');
+        codeEl.className = 'language-cpp';
+        codeEl.textContent = rawText;   // ✅ 自动处理 < > &
+        pre.appendChild(codeEl);
+        contentEl.appendChild(pre);
+        if (typeof hljs !== 'undefined') hljs.highlightAll();
+      }
+
+      function renderMarkdown() {
+        if (typeof markdownit === 'undefined') {
+          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 ../markdown-it.min.js</p>';
+          return;
+        }
+        var md = markdownit({ html: false, linkify: true, breaks: false });
+        contentEl.innerHTML = '<div id="markdown-content">' + md.render(rawText) + '</div>';
+        if (typeof hljs !== 'undefined') {
+          document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
+            hljs.highlightElement(block);
+          });
+        }
+        if (window.MathJax && MathJax.typesetPromise) {
+          MathJax.typesetPromise([contentEl]).catch(function(err) {
+            console.warn('MathJax 渲染错误:', err);
+          });
+        }
+      }
+
+      function render() {
+        if (currentMode === 'cpp') renderCpp();
+        else renderMarkdown();
+      }
+
+      document.querySelectorAll('#mode-switcher button').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          currentMode = btn.dataset.mode;
+          document.querySelectorAll('#mode-switcher button').forEach(function(b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          render();
+        });
+      });
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', render);
+      } else {
+        render();
+      }
+    })();
+  </script>
+</body>
+</html>
