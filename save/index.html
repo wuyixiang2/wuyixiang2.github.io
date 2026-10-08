@@ -1,129 +1,9 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>save</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #f8f9fa;
-      padding: 16px;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    h2 { font-size: 18px; margin-bottom: 12px; font-weight: 600; }
-    label { display: block; font-size: 14px; color: #495057; margin: 10px 0 4px; }
-    input[type="text"], input[type="password"], textarea {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 15px;
-      font-family: inherit;
-      background: white;
-    }
-    textarea {
-      min-height: 45vh;
-      font-family: "Consolas", "Monaco", "Courier New", monospace;
-      line-height: 1.5;
-      resize: vertical;
-    }
-    button {
-      padding: 8px 18px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background: white;
-      font-size: 15px;
-      cursor: pointer;
-      margin-top: 10px;
-      margin-right: 6px;
-    }
-    button:hover { background: #e9ecef; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    #status {
-      font-size: 14px;
-      color: #495057;
-      margin-top: 10px;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    #status.ok { color: #0a7c2f; }
-    #status.err { color: #c92a2a; }
-    details {
-      margin-bottom: 16px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 10px;
-      background: white;
-    }
-    details summary { cursor: pointer; font-size: 14px; color: #495057; }
-  </style>
-</head>
-<body>
+function buildPageHtml(id, code, title) {
+  const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
+  const pageTitle = escapeHtml(rawTitle);
+  const safeCode = escapeHtml(code);
 
-  <h2>保存代码到 paste/{编号}</h2>
-
-  <details id="settingsPanel">
-    <summary>GitHub 设置（首次使用需填写 Token，会保存在本浏览器）</summary>
-    <label>Personal Access Token</label>
-    <input type="password" id="ghToken" placeholder="ghp_...">
-    <button id="saveSettings">保存设置</button>
-  </details>
-
-  <label>编号（paste/ 后面的部分）</label>
-  <input type="text" id="pasteId" placeholder="编号">
-
-  <label>页面标题（留空则使用 paste/编号）</label>
-  <input type="text" id="pageTitle" placeholder="标题">
-
-  <label>代码内容（请粘贴 C++ 代码）</label>
-  <textarea id="codeInput" placeholder="在这里粘贴代码..."></textarea>
-
-  <div>
-    <button id="submitBtn">生成并上传</button>
-    <button id="previewBtn">本地预览</button>
-  </div>
-
-  <div id="status"></div>
-
-  <script>
-    // ---------- 固定的仓库配置（已硬编码，界面不显示） ----------
-    const GH_OWNER  = 'wuyixiang';
-    const GH_REPO   = 'wuyixiang2';
-    const GH_BRANCH = 'main';
-
-    // ---------- Token 存取 ----------
-    const TOKEN_KEY = 'paste_save_token';
-
-    function loadToken() {
-      try {
-        return localStorage.getItem(TOKEN_KEY) || '';
-      } catch (e) { return ''; }
-    }
-    function saveToken(token) {
-      localStorage.setItem(TOKEN_KEY, token);
-    }
-    function applyTokenToForm() {
-      const token = loadToken();
-      if (token) document.getElementById('ghToken').value = token;
-    }
-
-    // ---------- HTML 转义 ----------
-    function escapeHtml(str) {
-      return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
-
-    // ---------- 生成页面 HTML ----------
-    function buildPageHtml(id, code, title) {
-      const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
-      const pageTitle = escapeHtml(rawTitle);
-
-      return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
@@ -131,6 +11,13 @@
   <title>${pageTitle}</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
+  <script src="../markdown-it.min.js"><\/script>
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] }
+    };
+  <\/script>
+  <script id="MathJax-script" async src="../tex-mml-chtml.js"><\/script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -139,6 +26,32 @@
       padding: 16px;
       max-width: 1000px;
       margin: 0 auto;
+    }
+    #mode-switcher {
+      position: fixed;
+      top: 10px;
+      right: 50px;
+      z-index: 9999;
+    }
+    #mode-switcher button {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    #mode-switcher button.active {
+      background: #0d6efd;
+      color: white;
+      border-color: #0d6efd;
+    }
+    #mode-switcher button:hover {
+      background: #e9ecef;
+    }
+    #mode-switcher button.active:hover {
+      background: #0b5ed7;
     }
     pre {
       background: white;
@@ -153,134 +66,90 @@
       tab-size: 4;
     }
     code { font-family: inherit; }
+    #markdown-content {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    #markdown-content pre {
+      border: 1px solid #eee;
+    }
   </style>
 </head>
 <body>
-  <pre><code class="language-cpp">${escapeHtml(code)}</code></pre>
-  <script>hljs.highlightAll();<\/script>
-</body>
-</html>`;
-    }
+  <div id="mode-switcher">
+    <button data-mode="cpp" class="active">.cpp</button>
+    <button data-mode="markdown">markdown(LaTeX)</button>
+  </div>
 
-    // ---------- base64 编码（支持中文） ----------
-    function toBase64(str) {
-      const bytes = new TextEncoder().encode(str);
-      let bin = '';
-      bytes.forEach(b => bin += String.fromCharCode(b));
-      return btoa(bin);
-    }
+  <div id="content"></div>
 
-    // ---------- 提交到 GitHub ----------
-    async function uploadToGitHub(token, path, content, commitMsg) {
-      const apiBase = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
-      const headers = {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json'
-      };
+  <script type="text/plain" id="rawSource">${safeCode}<\/script>
 
-      let sha = null;
-      const getRes = await fetch(`${apiBase}?ref=${encodeURIComponent(GH_BRANCH)}`, { headers });
-      if (getRes.ok) {
-        const data = await getRes.json();
-        sha = data.sha;
-      } else if (getRes.status !== 404) {
-        const err = await getRes.json().catch(() => ({}));
-        throw new Error(`查询失败（${getRes.status}）：${err.message || '未知错误'}`);
+  <script>
+    (function() {
+      var rawText = document.getElementById('rawSource').textContent;
+      var currentMode = 'cpp';
+      var contentEl = document.getElementById('content');
+
+      function escapeHtmlLocal(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       }
 
-      const body = {
-        message: commitMsg,
-        content: toBase64(content),
-        branch: GH_BRANCH
-      };
-      if (sha) body.sha = sha;
+      function renderCpp() {
+        contentEl.innerHTML = '<pre><code class="language-cpp">' + escapeHtmlLocal(rawText) + '</code></pre>';
+        if (typeof hljs !== 'undefined') {
+          hljs.highlightAll();
+        }
+      }
 
-      const putRes = await fetch(apiBase, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(body)
+      function renderMarkdown() {
+        if (typeof markdownit === 'undefined') {
+          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 ../markdown-it.min.js</p>';
+          return;
+        }
+        var md = markdownit({ html: false, linkify: true, breaks: false });
+        contentEl.innerHTML = '<div id="markdown-content">' + md.render(rawText) + '</div>';
+        if (typeof hljs !== 'undefined') {
+          document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
+            hljs.highlightElement(block);
+          });
+        }
+        if (window.MathJax && MathJax.typesetPromise) {
+          MathJax.typesetPromise([contentEl]).catch(function(err) {
+            console.warn('MathJax 渲染错误:', err);
+          });
+        }
+      }
+
+      function render() {
+        if (currentMode === 'cpp') {
+          renderCpp();
+        } else {
+          renderMarkdown();
+        }
+      }
+
+      document.querySelectorAll('#mode-switcher button').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          currentMode = btn.dataset.mode;
+          document.querySelectorAll('#mode-switcher button').forEach(function(b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          render();
+        });
       });
 
-      if (!putRes.ok) {
-        const err = await putRes.json().catch(() => ({}));
-        throw new Error(`提交失败（${putRes.status}）：${err.message || '未知错误'}`);
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', render);
+      } else {
+        render();
       }
-      return await putRes.json();
-    }
-
-    // ---------- 状态提示 ----------
-    const statusEl = document.getElementById('status');
-    function setStatus(msg, type) {
-      statusEl.textContent = msg;
-      statusEl.className = type || '';
-    }
-
-    // ---------- 保存 Token ----------
-    document.getElementById('saveSettings').addEventListener('click', function() {
-      const token = document.getElementById('ghToken').value.trim();
-      if (!token) {
-        setStatus('请填写 Token', 'err');
-        return;
-      }
-      saveToken(token);
-      setStatus('Token 已保存到本浏览器', 'ok');
-    });
-
-    // ---------- 本地预览 ----------
-    document.getElementById('previewBtn').addEventListener('click', function() {
-      const id = document.getElementById('pasteId').value.trim() || 'preview';
-      const code = document.getElementById('codeInput').value;
-      const title = document.getElementById('pageTitle').value.trim();
-
-      if (!code) { setStatus('请先输入代码', 'err'); return; }
-      const html = buildPageHtml(id, code, title);
-      const w = window.open('', '_blank');
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-    });
-
-    // ---------- 生成并上传 ----------
-    document.getElementById('submitBtn').addEventListener('click', async function() {
-      const id = document.getElementById('pasteId').value.trim();
-      const code = document.getElementById('codeInput').value;
-      const title = document.getElementById('pageTitle').value.trim();
-      const token = loadToken();
-
-      if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
-        setStatus('编号不能为空，且只能包含字母、数字、下划线、短横线', 'err');
-        return;
-      }
-      if (!code) { setStatus('请输入代码内容', 'err'); return; }
-      if (!token) {
-        setStatus('请先在“GitHub 设置”中填写并保存 Token', 'err');
-        document.getElementById('settingsPanel').open = true;
-        return;
-      }
-
-      this.disabled = true;
-      setStatus('正在生成并上传...');
-
-      try {
-        const html = buildPageHtml(id, code, title);
-        const path = `paste/${id}/index.html`;
-        await uploadToGitHub(token, path, html, `Add paste ${id}`);
-        setStatus(
-          '上传成功！\n' +
-          'GitHub Pages 通常 1–2 分钟后生效。\n' +
-          '访问地址：https://paste.aaa.com/' + id
-        , 'ok');
-      } catch (e) {
-        setStatus('出错：' + e.message, 'err');
-      } finally {
-        this.disabled = false;
-      }
-    });
-
-    // 初始化
-    applyTokenToForm();
-  </script>
-
+    })();
+  <\/script>
 </body>
-</html>
+</html>`;
+}
