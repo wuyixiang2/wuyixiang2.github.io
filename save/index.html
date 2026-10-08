@@ -136,16 +136,14 @@
   <script src="markdown-it.min.js"><\/script>
   <script>
     window.MathJax = {
-  loader: { load: ['[tex]/color'] },
-  tex: {
-    packages: {'[+]': ['color']},
-    inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-    displayMath: [['$$', '$$']]
-  },
-  options: {
-    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-  }
-};
+    tex: {
+      inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+      displayMath: [['$$', '$$']]
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  };
   <\/script>
   <script id="MathJax-script" async src="tex-mml-chtml.js"><\/script>
   <style>
