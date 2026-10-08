@@ -258,7 +258,7 @@ function buildPageHtml(id, code, title) {
         var mathStore = [];
       
         // 只保护行内公式 $...$（不跨行）
-        text = text.replace(/\$([^$\n]+?)\$/g, function(match) {
+        text = text.replace(/\\$([^$\\n]+?)\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
@@ -268,12 +268,12 @@ function buildPageHtml(id, code, title) {
         var html = md.render(text);
       
         // 把占位符换回原始公式
-        html = html.replace(/MATHPLACEHOLDER(\d+)END/g, function(match, idx) {
+        html = html.replace(/MATHPLACEHOLDER(\\d+)END/g, function(match, idx) {
           return mathStore[parseInt(idx, 10)];
         });
       
-        // 关键修复：两个相邻公式之间的 $$ 用一个空格隔开，避免被 KaTeX 当作块级公式
-        html = html.replace(/\$\$/g, '$ $');
+        // 两个相邻公式之间的 $$ 用一个空格隔开
+        html = html.replace(/\\$\\$/g, '$ $');
       
         contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
       
