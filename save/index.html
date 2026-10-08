@@ -287,11 +287,10 @@
     async function uploadToGitHub(token, path, content, commitMsg) {
       const apiBase = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
       const headers = {
-        'Authorization': `token ${token}`,
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'
       };
-
       let sha = null;
       const getRes = await fetch(`${apiBase}?ref=${encodeURIComponent(GH_BRANCH)}`, { headers });
       if (getRes.ok) {
