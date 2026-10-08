@@ -34,22 +34,25 @@
   </style>
 </head>
 <body>
-  <pre><code class="language-cpp">#include &lt;iostream&gt;
-#include &lt;vector&gt;
+  <pre><code class="language-cpp" id="codeBlock"></code></pre>
+  <script type="text/plain" id="rawCode">
+//P1505
+#include <iostream>
+#include <vector>
 #define int long long
 using namespace std;
 int dep[200005],son[200005],top[200005],ge[200005],fat[200005],id[200005],n,m,cnt;
 int a[200005],zu[200005],yo[200005],ch[200005];
-vector&lt;int&gt;ve[200005];
+vector<int>ve[200005];
 void dfs(int x,int fa)
 {
     dep[x] = dep[fa] + 1,ge[x] = 1,fat[x] = fa;
-    for(int i = 0;i &lt; ve[x].size();i ++)
+    for(int i = 0;i < ve[x].size();i ++)
     {
         if(ve[x][i] == fa)continue ;
         dfs(ve[x][i],x);
         ge[x] += ge[ve[x][i]];
-        if(ge[son[x]] &lt; ge[ve[x][i]])son[x] = ve[x][i];
+        if(ge[son[x]] < ge[ve[x][i]])son[x] = ve[x][i];
     }
 }
 void dfs2(int x,int y)
@@ -57,7 +60,7 @@ void dfs2(int x,int y)
     top[x] = y,id[x] = ++cnt;
     if(!son[x])return ;
     dfs2(son[x],y);
-    for(int i = 0;i &lt; ve[x].size();i ++)
+    for(int i = 0;i < ve[x].size();i ++)
     {
         if(ve[x][i] == son[x] || ve[x][i] == fat[x])continue ;
         dfs2(ve[x][i],ve[x][i]);
@@ -90,13 +93,13 @@ void build(int p,int x,int y)
 {
     tr[p] = {x,y,0,0,0,0};
     if(x == y){return ;}
-    build(p * 2 + 1,x,(x + y) &gt;&gt; 1);
-    build(p * 2 + 2,((x + y) &gt;&gt; 1) + 1,y);
+    build(p * 2 + 1,x,(x + y) >> 1);
+    build(p * 2 + 2,((x + y) >> 1) + 1,y);
     pushup(p);
 }
 void jia(int x,int u,int v)
 {
-	if(tr[x].ze == u &amp;&amp; v == tr[x].ye)
+	if(tr[x].ze == u && v == tr[x].ye)
 	{
         tr[x].add ^= 1,tr[x].sum *= -1;
         int mx = tr[x].maxx,mn = tr[x].minn;
@@ -104,77 +107,77 @@ void jia(int x,int u,int v)
 		return ;
 	}
     pushdown(x);
-	int mid = (tr[x].ze + tr[x].ye) &gt;&gt; 1;
-	if(u &lt;= mid)jia(x * 2 + 1,u,min(v,mid));
-	if(v &gt; mid)jia(x * 2 + 2,max(u,mid + 1),v);
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)jia(x * 2 + 1,u,min(v,mid));
+	if(v > mid)jia(x * 2 + 2,max(u,mid + 1),v);
 	pushup(x);
 }
 void cover(int x,int u,int v,int k)
 {
-	if(tr[x].ze == u &amp;&amp; v == tr[x].ye)
+	if(tr[x].ze == u && v == tr[x].ye)
 	{
 		tr[x].sum = tr[x].maxx = tr[x].minn = k;
         tr[x].add = 0;
 		return ;
 	}
     pushdown(x);
-	int mid = (tr[x].ze + tr[x].ye) &gt;&gt; 1;
-	if(u &lt;= mid)cover(x * 2 + 1,u,min(v,mid),k);
-	if(v &gt; mid)cover(x * 2 + 2,max(u,mid + 1),v,k);
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)cover(x * 2 + 1,u,min(v,mid),k);
+	if(v > mid)cover(x * 2 + 2,max(u,mid + 1),v,k);
 	pushup(x);
 }
 int query(int x,int u,int v)
 {
     pushdown(x);
 	int num = -1e9;
-	if(tr[x].ze == u &amp;&amp; v == tr[x].ye)return tr[x].maxx;
-	int mid = (tr[x].ze + tr[x].ye) &gt;&gt; 1;
-	if(u &lt;= mid)num = max(num,query(x * 2 + 1,u,min(v,mid)));
-	if(v &gt; mid)num = max(num,query(x * 2 + 2,max(u,mid + 1),v));
+	if(tr[x].ze == u && v == tr[x].ye)return tr[x].maxx;
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)num = max(num,query(x * 2 + 1,u,min(v,mid)));
+	if(v > mid)num = max(num,query(x * 2 + 2,max(u,mid + 1),v));
 	return num;
 }
 int query2(int x,int u,int v)
 {
     pushdown(x);
 	int num = 1e9;
-	if(tr[x].ze == u &amp;&amp; v == tr[x].ye)return tr[x].minn;
-	int mid = (tr[x].ze + tr[x].ye) &gt;&gt; 1;
-	if(u &lt;= mid)num = min(num,query2(x * 2 + 1,u,min(v,mid)));
-	if(v &gt; mid)num = min(num,query2(x * 2 + 2,max(u,mid + 1),v));
+	if(tr[x].ze == u && v == tr[x].ye)return tr[x].minn;
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)num = min(num,query2(x * 2 + 1,u,min(v,mid)));
+	if(v > mid)num = min(num,query2(x * 2 + 2,max(u,mid + 1),v));
 	return num;
 }
 int query3(int x,int u,int v)
 {
     pushdown(x);
 	int num = 0;
-	if(tr[x].ze == u &amp;&amp; v == tr[x].ye)return tr[x].sum;
-	int mid = (tr[x].ze + tr[x].ye) &gt;&gt; 1;
-	if(u &lt;= mid)num += query3(x * 2 + 1,u,min(v,mid));
-	if(v &gt; mid)num += query3(x * 2 + 2,max(u,mid + 1),v);
+	if(tr[x].ze == u && v == tr[x].ye)return tr[x].sum;
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)num += query3(x * 2 + 1,u,min(v,mid));
+	if(v > mid)num += query3(x * 2 + 2,max(u,mid + 1),v);
 	return num;
 }
 void add(int u,int v)
 {
     while(top[u] != top[v])
     {
-        if(dep[top[u]] &lt; dep[top[v]])swap(u,v);
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
         jia(0,id[top[u]],id[u]);
         u = fat[top[u]];
     }
     if(u == v)return ;
-    if(dep[u] &lt; dep[v])jia(0,id[son[u]],id[v]);
+    if(dep[u] < dep[v])jia(0,id[son[u]],id[v]);
     else jia(0,id[son[v]],id[u]);
 }
 void change(int u,int v,int zh)
 {
     while(top[u] != top[v])
     {
-        if(dep[top[u]] &lt; dep[top[v]])swap(u,v);
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
         cover(0,id[top[u]],id[u],zh);
         u = fat[top[u]];
     }
     if(u == v)return ;
-    if(dep[u] &lt; dep[v])cover(0,id[son[u]],id[v],zh);
+    if(dep[u] < dep[v])cover(0,id[son[u]],id[v],zh);
     else cover(0,id[son[v]],id[u],zh);
 }
 int lca2(int u,int v)
@@ -182,12 +185,12 @@ int lca2(int u,int v)
     int res = -1e9;
     while(top[u] != top[v])
     {
-        if(dep[top[u]] &lt; dep[top[v]])swap(u,v);
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
         res = max(res,query(0,id[top[u]],id[u]));
         u = fat[top[u]];
     }
     if(u == v)return res;
-    if(dep[u] &lt; dep[v])res = max(res,query(0,id[son[u]],id[v]));
+    if(dep[u] < dep[v])res = max(res,query(0,id[son[u]],id[v]));
     else res = max(res,query(0,id[son[v]],id[u]));
     return res;
 }
@@ -196,12 +199,12 @@ int lca3(int u,int v)
     int res = 1e9;
     while(top[u] != top[v])
     {
-        if(dep[top[u]] &lt; dep[top[v]])swap(u,v);
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
         res = min(res,query2(0,id[top[u]],id[u]));
         u = fat[top[u]];
     }
     if(u == v)return res;
-    if(dep[u] &lt; dep[v])res = min(res,query2(0,id[son[u]],id[v]));
+    if(dep[u] < dep[v])res = min(res,query2(0,id[son[u]],id[v]));
     else res = min(res,query2(0,id[son[v]],id[u]));
     return res;
 }
@@ -210,12 +213,12 @@ int lca4(int u,int v)
     int res = 0;
     while(top[u] != top[v])
     {
-        if(dep[top[u]] &lt; dep[top[v]])swap(u,v);
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
         res += query3(0,id[top[u]],id[u]);
         u = fat[top[u]];
     }
     if(u == v)return res;
-    if(dep[u] &lt; dep[v])res += query3(0,id[son[u]],id[v]);
+    if(dep[u] < dep[v])res += query3(0,id[son[u]],id[v]);
     else res += query3(0,id[son[v]],id[u]);
     return res;
 }
@@ -223,32 +226,42 @@ signed main()
 {
     ios::sync_with_stdio(0);
     cin.tie(0),cout.tie(0);
-    cin &gt;&gt; n;
-    for(int i = 1;i &lt; n;i ++)
+    cin >> n;
+    for(int i = 1;i < n;i ++)
     {
         int x,y;
-        cin &gt;&gt; x &gt;&gt; y,x ++,y ++;
+        cin >> x >> y,x ++,y ++;
         ve[x].push_back(y),ve[y].push_back(x);
-        cin &gt;&gt; ch[i];zu[i] = x,yo[i] = y;
+        cin >> ch[i];zu[i] = x,yo[i] = y;
 	}
     dfs(1,0);
     dfs2(1,1);
     build(0,1,n);
-    for(int i = 1;i &lt; n;i ++)change(zu[i],yo[i],ch[i]);
-    cin &gt;&gt; m;
-    for(int i = 1,y,z,zh;i &lt;= m;i ++)
+    for(int i = 1;i < n;i ++)change(zu[i],yo[i],ch[i]);
+    cin >> m;
+    for(int i = 1,y,z,zh;i <= m;i ++)
     {
         string x;
-        cin &gt;&gt; x;
-        cin &gt;&gt; y &gt;&gt; z;
+        cin >> x;
+        cin >> y >> z;
         if(x != "C")y ++,z ++;
         if(x == "C")change(zu[y],yo[y],z);
         else if(x == "N")add(y,z);
-        else if(x == "MAX")cout &lt;&lt; lca2(y,z) &lt;&lt; '\n';
-        else if(x == "MIN")cout &lt;&lt; lca3(y,z) &lt;&lt; '\n';
-        else cout &lt;&lt; lca4(y,z) &lt;&lt; '\n';
+        else if(x == "MAX")cout << lca2(y,z) << '\n';
+        else if(x == "MIN")cout << lca3(y,z) << '\n';
+        else cout << lca4(y,z) << '\n';
     }
-}</code></pre>
-	<script>hljs.highlightAll();</script>
-</body>
-</html>
+}
+</script>
+
+<script src="highlight.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const raw = document.getElementById('rawCode').textContent;
+    const codeEl = document.getElementById('codeBlock');
+    codeEl.textContent = raw;
+    if (typeof hljs !== 'undefined') {
+      hljs.highlightElement(codeEl);
+    }
+  });
+</script>
