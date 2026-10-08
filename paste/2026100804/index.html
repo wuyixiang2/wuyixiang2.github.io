@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>paste/2026100804</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    pre {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+      tab-size: 4;
+    }
+    code { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <pre><code class="language-cpp">//P2146
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#define int long long
+using namespace std;
+int dep[200005],son[200005],top[200005],ge[200005],fat[200005],id[200005],id2[200005],n,m,s,mod,cnt;
+int a[200005];
+vector&lt;int&gt;ve[200005];
+void dfs(int x,int fa)
+{
+    dep[x] = dep[fa] + 1,ge[x] = 1,fat[x] = fa,son[x] = n + 1;
+    for(int i = 0;i &lt; ve[x].size();i ++)
+    {
+        dfs(ve[x][i],x);
+        ge[x] += ge[ve[x][i]];
+        if(ge[son[x]] &lt; ge[ve[x][i]])son[x] = ve[x][i];
+    }
+    if(son[x] == n + 1)son[x] = 0;
+}
+void dfs2(int x,int y)
+{
+    top[x] = y,id[x] = ++cnt,id2[cnt] = a[x];
+    //cout &lt;&lt; x &lt;&lt; " " &lt;&lt; cnt &lt;&lt; " " &lt;&lt; id[x] &lt;&lt; " " &lt;&lt; son[x] &lt;&lt; '\n';
+    if(!son[x])return ;
+    dfs2(son[x],y);
+    for(int i = 0;i &lt; ve[x].size();i ++)
+    {
+        if(ve[x][i] == son[x])continue ;
+        dfs2(ve[x][i],ve[x][i]);
+    }
+}
+struct node
+{
+    int ze,ye,sum,add;
+}tr[800005];
+void pushup(int p)
+{
+    tr[p].sum = tr[p * 2 + 1].sum + tr[p * 2 + 2].sum;
+}
+void pushdown(int p)
+{
+    if(tr[p].add == 1)
+    {
+        tr[p * 2 + 1].sum = (tr[p * 2 + 1].ye - tr[p * 2 + 1].ze + 1);
+        tr[p * 2 + 2].sum = (tr[p * 2 + 2].ye - tr[p * 2 + 2].ze + 1);
+        tr[p * 2 + 1].add = tr[p].add;
+        tr[p * 2 + 2].add = tr[p].add;
+    }
+    if(tr[p].add == -1)
+    {
+        tr[p * 2 + 1].sum = 0;
+        tr[p * 2 + 2].sum = 0;
+        tr[p * 2 + 1].add = tr[p].add;
+        tr[p * 2 + 2].add = tr[p].add;
+    }
+	tr[p].add = 0;
+}
+void build(int p,int x,int y)
+{
+    tr[p] = {x,y,0,0};
+    if(x == y){return ;}
+    build(p * 2 + 1,x,(x + y) &gt;&gt; 1);
+    build(p * 2 + 2,((x + y) &gt;&gt; 1) + 1,y);
+    pushup(p);
+}
+void jia(int x,int u,int v,int k)
+{
+    pushdown(x);
+	if(tr[x].ze == u &amp;&amp; v == tr[x].ye)
+	{
+		if(k == 1)tr[x].sum = (v - u + 1) * k,tr[x].add = k;
+		else tr[x].sum = 0,tr[x].add = -1;
+		return ;
+	}
+	int mid = (tr[x].ze + tr[x].ye) &gt;&gt; 1;
+	if(u &lt;= mid)jia(x * 2 + 1,u,min(v,mid),k);
+	if(v &gt; mid)jia(x * 2 + 2,max(u,mid + 1),v,k);
+	pushup(x);
+}
+int query(int x,int u,int v)
+{
+    pushdown(x);
+	int num = 0;
+	if(tr[x].ze == u &amp;&amp; v == tr[x].ye)return tr[x].sum;
+	int mid = (tr[x].ze + tr[x].ye) &gt;&gt; 1;
+	if(u &lt;= mid)num += query(x * 2 + 1,u,min(v,mid));
+	if(v &gt; mid)num += query(x * 2 + 2,max(u,mid + 1),v);
+	return num;
+}
+void lca(int u,int v)
+{
+    while(top[u] != top[v])
+    {
+        if(dep[top[u]] &lt; dep[top[v]])swap(u,v);
+        jia(0,id[top[u]],id[u],1);
+        u = fat[top[u]];
+    }
+    if(dep[u] &lt; dep[v])jia(0,id[u],id[v],1);
+    else jia(0,id[v],id[u],1);
+}
+int lca2(int u,int v)
+{
+    int res = 0;
+    while(top[u] != top[v])
+    {
+        if(dep[top[u]] &lt; dep[top[v]])swap(u,v);
+       // cout &lt;&lt; id[top[u]] &lt;&lt; " " &lt;&lt; id[u] &lt;&lt;query(0,id[top[u]],id[u]) &lt;&lt; '\n';
+        res += query(0,id[top[u]],id[u]);
+        u = fat[top[u]];
+    }
+   // cout &lt;&lt; id[u] &lt;&lt; " " &lt;&lt; v &lt;&lt; " " &lt;&lt; id[v] &lt;&lt; " " &lt;&lt; query(0,id[u],id[v]) &lt;&lt; '\n';
+    if(dep[u] &lt; dep[v])res += query(0,id[u],id[v]);
+    else res += query(0,id[v],id[u]);
+    return res;
+}
+void gen(int x)
+{
+    jia(0,id[x],id[x] + ge[x] - 1,0);
+}
+int gen2(int x)
+{
+    return query(0,id[x],id[x] + ge[x] - 1);
+}
+signed main()
+{
+    cin &gt;&gt; n;
+    for(int i = 1;i &lt; n;i ++)
+    {
+        int x;
+        cin &gt;&gt; x;
+        ve[x].push_back(i);
+	}
+    cin &gt;&gt; m;
+    dfs(0,0);
+    dfs2(0,0);
+    build(0,0,n);
+    for(int i = 1,y,z,zh;i &lt;= m;i ++)
+    {
+        string x;
+        cin &gt;&gt; x &gt;&gt; y;
+        if(x == "install")
+        {
+            //cout &lt;&lt; dep[y] &lt;&lt; " 950454\n";
+            cout &lt;&lt; dep[y] - lca2(0,y) &lt;&lt; '\n';
+            lca(0,y);
+        }
+        else
+        {
+            cout &lt;&lt; gen2(y) &lt;&lt; '\n';
+            gen(y);
+        }
+    }
+}</code></pre>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>
