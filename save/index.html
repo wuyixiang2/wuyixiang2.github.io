@@ -80,11 +80,10 @@
 
   <label>编号（paste/ 后面的部分）</label>
   <input type="text" id="pasteId" placeholder="例如 2026100802">
-  
-  <!-- 新增：页面标题输入框 -->
+
   <label>页面标题（留空则使用 paste/编号）</label>
   <input type="text" id="pageTitle" placeholder="例如 P1505 代码">
-  
+
   <label>代码内容（直接粘贴原始 C++ 代码即可，无需转义）</label>
   <textarea id="codeInput" placeholder="在这里粘贴代码..."></textarea>
 
@@ -118,7 +117,7 @@
       document.getElementById('ghToken').value = cfg.token || '';
     }
 
-    // ---------- HTML 转义（用于嵌入代码） ----------
+    // ---------- HTML 转义 ----------
     function escapeHtml(str) {
       return str
         .replace(/&/g, '&amp;')
@@ -126,55 +125,17 @@
         .replace(/>/g, '&gt;');
     }
 
-    // ---------- 生成页面 HTML（风格与你现有页面一致） ----------
+    // ---------- 生成页面 HTML ----------
     function buildPageHtml(id, code, title) {
-  // 标题：优先用用户输入的，否则用 paste/编号
-    const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
-    const pageTitle = escapeHtml(rawTitle);
-  
-    return `<!DOCTYPE html>
-            <html lang="zh">
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>${pageTitle}</title>
-              <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-              <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
-              <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body {
-                  font-family: system-ui, -apple-system, sans-serif;
-                  background: #f8f9fa;
-                  padding: 16px;
-                  max-width: 1000px;
-                  margin: 0 auto;
-                }
-                pre {
-                  background: white;
-                  border: 1px solid #ccc;
-                  border-radius: 4px;
-                  padding: 16px;
-                  overflow-x: auto;
-                  font-family: "Consolas", "Monaco", "Courier New", monospace;
-                  font-size: 14px;
-                  line-height: 1.5;
-                  white-space: pre;
-                  tab-size: 4;
-                }
-                code { font-family: inherit; }
-              </style>
-            </head>
-            <body>
-              <pre><code class="language-cpp">${escapeHtml(code)}</code></pre>
-              <script>hljs.highlightAll();<\/script>
-            </body>
-            </html>`;
-      }
+      const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
+      const pageTitle = escapeHtml(rawTitle);
+
+      return `<!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>paste/${id}</title>
+  <title>${pageTitle}</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
   <style>
@@ -225,7 +186,6 @@
         'Content-Type': 'application/json'
       };
 
-      // 1. 查询文件是否已存在，拿到 sha
       let sha = null;
       const getRes = await fetch(`${apiBase}?ref=${encodeURIComponent(cfg.branch)}`, { headers });
       if (getRes.ok) {
@@ -236,7 +196,6 @@
         throw new Error(`查询失败（${getRes.status}）：${err.message || '未知错误'}`);
       }
 
-      // 2. PUT 创建或更新
       const body = {
         message: commitMsg,
         content: toBase64(content),
@@ -280,57 +239,55 @@
       setStatus('设置已保存到本浏览器', 'ok');
     });
 
-    // 本地预览
     document.getElementById('previewBtn').addEventListener('click', function() {
       const id = document.getElementById('pasteId').value.trim() || 'preview';
       const code = document.getElementById('codeInput').value;
-      const title = document.getElementById('pageTitle').value.trim();   // 新增
+      const title = document.getElementById('pageTitle').value.trim();
 
       if (!code) { setStatus('请先输入代码', 'err'); return; }
-      const html = buildPageHtml(id, code, title);                       // 传入 title
+      const html = buildPageHtml(id, code, title);
       const w = window.open('', '_blank');
       w.document.open();
       w.document.write(html);
       w.document.close();
     });
-    // 生成并上传
+
     document.getElementById('submitBtn').addEventListener('click', async function() {
-    const id = document.getElementById('pasteId').value.trim();
-    const code = document.getElementById('codeInput').value;
-    const title = document.getElementById('pageTitle').value.trim();   // 新增
-    const cfg = loadConfig();
+      const id = document.getElementById('pasteId').value.trim();
+      const code = document.getElementById('codeInput').value;
+      const title = document.getElementById('pageTitle').value.trim();
+      const cfg = loadConfig();
 
-    if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
-      setStatus('编号不能为空，且只能包含字母、数字、下划线、短横线', 'err');
-      return;
-    }
-    if (!code) { setStatus('请输入代码内容', 'err'); return; }
-    if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
-      setStatus('请先在“GitHub 设置”中填写并保存配置', 'err');
-      document.getElementById('settingsPanel').open = true;
-      return;
-    }
+      if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
+        setStatus('编号不能为空，且只能包含字母、数字、下划线、短横线', 'err');
+        return;
+      }
+      if (!code) { setStatus('请输入代码内容', 'err'); return; }
+      if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+        setStatus('请先在“GitHub 设置”中填写并保存配置', 'err');
+        document.getElementById('settingsPanel').open = true;
+        return;
+      }
 
-    this.disabled = true;
-    setStatus('正在生成并上传...');
+      this.disabled = true;
+      setStatus('正在生成并上传...');
 
-    try {
-      const html = buildPageHtml(id, code, title);   // 传入 title
-      const path = `paste/${id}/index.html`;
-      await uploadToGitHub(cfg, path, html, `Add paste ${id}`);
-      setStatus(
-        '上传成功！\n' +
-        'GitHub Pages 通常 1–2 分钟后生效。\n' +
-        '访问地址：https://paste.aaa.com/' + id
-      , 'ok');
-    } catch (e) {
-      setStatus('出错：' + e.message, 'err');
-    } finally {
-      this.disabled = false;
-    }
+      try {
+        const html = buildPageHtml(id, code, title);
+        const path = `paste/${id}/index.html`;
+        await uploadToGitHub(cfg, path, html, `Add paste ${id}`);
+        setStatus(
+          '上传成功！\n' +
+          'GitHub Pages 通常 1–2 分钟后生效。\n' +
+          '访问地址：https://paste.aaa.com/' + id
+        , 'ok');
+      } catch (e) {
+        setStatus('出错：' + e.message, 'err');
+      } finally {
+        this.disabled = false;
+      }
     });
 
-    // 初始化
     applyConfigToForm();
   </script>
 
