@@ -119,10 +119,9 @@
     }
 
     // ---------- 生成页面 HTML ----------
-  function buildPageHtml(id, code, title) {
+ function buildPageHtml(id, code, title) {
   const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
   const pageTitle = escapeHtml(rawTitle);
-  // 用 escapeHtml 处理代码，放进隐藏的 textarea 里
   const safeCode = escapeHtml(code);
 
   return `<!DOCTYPE html>
@@ -136,11 +135,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
   <script src="markdown-it.min.js"><\/script>
   <script>
-    MathJax = {
-      loader: { load: ['[tex]/color'] },
+    window.MathJax = {
       tex: {
-        packages: {'[+]': ['color']},
-        inlineMath: [['$', '$'], ['\\\\(', '\\\\)']]
+        inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+        displayMath: [['$$', '$$']]
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
       }
     };
   <\/script>
@@ -212,6 +213,7 @@
       var rawText = document.getElementById('rawSource').value;
       var currentMode = 'cpp';
       var contentEl = document.getElementById('content');
+      var mathRetries = 0;
 
       function renderCpp() {
         contentEl.innerHTML = '';
@@ -222,40 +224,64 @@
         pre.appendChild(codeEl);
         contentEl.appendChild(pre);
         if (typeof hljs !== 'undefined') hljs.highlightAll();
+        console.log('[render] cpp mode, length=' + rawText.length);
       }
 
       function renderMarkdown() {
         if (typeof markdownit === 'undefined') {
           contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 markdown-it.min.js</p>';
+          console.warn('[render] markdownit undefined');
           return;
         }
+
         var text = rawText;
         var mathStore = [];
+
+        // 先保护块级 $$...$$
         text = text.replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
+        // 再保护行内 $...$
         text = text.replace(/\\$([^\\$\\n]+?)\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
+
         var md = markdownit({ html: false, linkify: true, breaks: false });
         var html = md.render(text);
+
         html = html.replace(/MATHPLACEHOLDER(\\d+)END/g, function(match, idx) {
           return mathStore[parseInt(idx, 10)];
         });
+
         contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
+        console.log('[render] markdown mode, formulas stored=' + mathStore.length);
+
         if (typeof hljs !== 'undefined') {
           document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
             hljs.highlightElement(block);
           });
         }
-        if (window.MathJax && MathJax.typesetPromise) {
-          MathJax.typesetPromise([contentEl]).catch(function(err) {
-            console.warn('MathJax 渲染错误:', err);
+
+        mathRetries = 0;
+        tryMathJax();
+      }
+
+      function tryMathJax() {
+        if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
+          MathJax.typesetPromise([contentEl]).then(function() {
+            console.log('[MathJax] typeset done');
+          }).catch(function(err) {
+            console.error('[MathJax] error:', err);
           });
+        } else if (mathRetries < 30) {
+          mathRetries++;
+          setTimeout(tryMathJax, 200);
+        } else {
+          console.warn('[MathJax] not ready after 6s, check tex-mml-chtml.js');
         }
       }
 
@@ -275,11 +301,7 @@
         });
       });
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', render);
-      } else {
-        render();
-      }
+      render();
     })();
   <\/script>
 </body>
