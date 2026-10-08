@@ -119,24 +119,30 @@
     }
 
     // ---------- 生成页面 HTML ----------
-   function buildPageHtml(id, code, title) {
+  function buildPageHtml(id, code, title) {
   const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
   const pageTitle = escapeHtml(rawTitle);
-  // 用 JSON.stringify 安全嵌入原始代码，避免被二次转义
-  const safeCode = JSON.stringify(code).replace(/<\//g, '<\\/');
+  // 用 escapeHtml 处理代码，放进隐藏的 textarea 里
+  const safeCode = escapeHtml(code);
 
   return `<!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base href="/paste/">   <!-- 新增：固定基础路径 -->
+  <base href="/paste/">
   <title>${pageTitle}</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
   <script src="markdown-it.min.js"><\/script>
   <script>
-    MathJax = { tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] } };
+    MathJax = {
+      loader: { load: ['[tex]/color'] },
+      tex: {
+        packages: {'[+]': ['color']},
+        inlineMath: [['$', '$'], ['\\\\(', '\\\\)']]
+      }
+    };
   <\/script>
   <script id="MathJax-script" async src="tex-mml-chtml.js"><\/script>
   <style>
@@ -199,11 +205,11 @@
 
   <div id="content"></div>
 
-  <script>var RAW_CODE = ${safeCode};<\/script>
+  <textarea id="rawSource" style="display:none">${safeCode}</textarea>
 
   <script>
     (function() {
-      var rawText = RAW_CODE;
+      var rawText = document.getElementById('rawSource').value;
       var currentMode = 'cpp';
       var contentEl = document.getElementById('content');
 
@@ -212,7 +218,7 @@
         var pre = document.createElement('pre');
         var codeEl = document.createElement('code');
         codeEl.className = 'language-cpp';
-        codeEl.textContent = rawText;   // ✅ 自动处理 < > &
+        codeEl.textContent = rawText;
         pre.appendChild(codeEl);
         contentEl.appendChild(pre);
         if (typeof hljs !== 'undefined') hljs.highlightAll();
@@ -220,24 +226,24 @@
 
       function renderMarkdown() {
         if (typeof markdownit === 'undefined') {
-          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 ../markdown-it.min.js</p>';
+          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 markdown-it.min.js</p>';
           return;
         }
         var text = rawText;
         var mathStore = [];
-        text = text.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
+        text = text.replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
-        text = text.replace(/\$([^\$\n]+?)\$/g, function(match) {
+        text = text.replace(/\\$([^\\$\\n]+?)\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
         var md = markdownit({ html: false, linkify: true, breaks: false });
         var html = md.render(text);
-        html = html.replace(/MATHPLACEHOLDER(\d+)END/g, function(match, idx) {
+        html = html.replace(/MATHPLACEHOLDER(\\d+)END/g, function(match, idx) {
           return mathStore[parseInt(idx, 10)];
         });
         contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
