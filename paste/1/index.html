@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/paste/">   <!-- 新增：固定基础路径 -->
+  <title>1</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="markdown-it.min.js"></script>
+  <script>
+    MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+  </script>
+  <script id="MathJax-script" async src="tex-mml-chtml.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    #mode-switcher {
+      position: fixed;
+      top: 10px;
+      right: 50px;
+      z-index: 9999;
+    }
+    #mode-switcher button {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    #mode-switcher button.active {
+      background: #0d6efd;
+      color: white;
+      border-color: #0d6efd;
+    }
+    pre {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+      tab-size: 4;
+    }
+    code { font-family: inherit; }
+    #markdown-content {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    #markdown-content pre { border: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div id="mode-switcher">
+    <button data-mode="cpp" class="active">.cpp</button>
+    <button data-mode="markdown">markdown(LaTeX)</button>
+  </div>
+
+  <div id="content"></div>
+
+  <script>var RAW_CODE = "aaa\n\n$rr\\,rr$\n\n\n$rr\\;rr$";</script>
+
+  <script>
+    (function() {
+      var rawText = RAW_CODE;
+      var currentMode = 'cpp';
+      var contentEl = document.getElementById('content');
+
+      function renderCpp() {
+        contentEl.innerHTML = '';
+        var pre = document.createElement('pre');
+        var codeEl = document.createElement('code');
+        codeEl.className = 'language-cpp';
+        codeEl.textContent = rawText;   // ✅ 自动处理 < > &
+        pre.appendChild(codeEl);
+        contentEl.appendChild(pre);
+        if (typeof hljs !== 'undefined') hljs.highlightAll();
+      }
+
+      function renderMarkdown() {
+        if (typeof markdownit === 'undefined') {
+          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 ../markdown-it.min.js</p>';
+          return;
+        }
+        var text = rawText;
+        var mathStore = [];
+        text = text.replace(/$$([sS]+?)$$/g, function(match) {
+          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
+          mathStore.push(match);
+          return key;
+        });
+        text = text.replace(/$([^$
+]+?)$/g, function(match) {
+          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
+          mathStore.push(match);
+          return key;
+        });
+        var md = markdownit({ html: false, linkify: true, breaks: false });
+        var html = md.render(text);
+        html = html.replace(/MATHPLACEHOLDER(d+)END/g, function(match, idx) {
+          return mathStore[parseInt(idx, 10)];
+        });
+        contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
+        if (typeof hljs !== 'undefined') {
+          document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
+            hljs.highlightElement(block);
+          });
+        }
+        if (window.MathJax && MathJax.typesetPromise) {
+          MathJax.typesetPromise([contentEl]).catch(function(err) {
+            console.warn('MathJax 渲染错误:', err);
+          });
+        }
+      }
+
+      function render() {
+        if (currentMode === 'cpp') renderCpp();
+        else renderMarkdown();
+      }
+
+      document.querySelectorAll('#mode-switcher button').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          currentMode = btn.dataset.mode;
+          document.querySelectorAll('#mode-switcher button').forEach(function(b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          render();
+        });
+      });
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', render);
+      } else {
+        render();
+      }
+    })();
+  </script>
+</body>
+</html>
