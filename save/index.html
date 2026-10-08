@@ -119,10 +119,11 @@
     }
 
     // ---------- 生成页面 HTML ----------
-    function buildPageHtml(id, code, title) {
+   function buildPageHtml(id, code, title) {
   const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
   const pageTitle = escapeHtml(rawTitle);
-  const safeCode = escapeHtml(code);
+  // 用 JSON.stringify 安全嵌入原始代码，避免被二次转义
+  const safeCode = JSON.stringify(code).replace(/<\//g, '<\\/');
 
   return `<!DOCTYPE html>
 <html lang="zh">
@@ -134,9 +135,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
   <script src="../markdown-it.min.js"><\/script>
   <script>
-    MathJax = {
-      tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] }
-    };
+    MathJax = { tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] } };
   <\/script>
   <script id="MathJax-script" async src="../tex-mml-chtml.js"><\/script>
   <style>
@@ -168,12 +167,6 @@
       color: white;
       border-color: #0d6efd;
     }
-    #mode-switcher button:hover {
-      background: #e9ecef;
-    }
-    #mode-switcher button.active:hover {
-      background: #0b5ed7;
-    }
     pre {
       background: white;
       border: 1px solid #ccc;
@@ -194,9 +187,7 @@
       padding: 16px;
       line-height: 1.6;
     }
-    #markdown-content pre {
-      border: 1px solid #eee;
-    }
+    #markdown-content pre { border: 1px solid #eee; }
   </style>
 </head>
 <body>
@@ -207,23 +198,23 @@
 
   <div id="content"></div>
 
-  <script type="text/plain" id="rawSource">${safeCode}<\/script>
+  <script>var RAW_CODE = ${safeCode};<\/script>
 
   <script>
     (function() {
-      var rawText = document.getElementById('rawSource').textContent;
+      var rawText = RAW_CODE;
       var currentMode = 'cpp';
       var contentEl = document.getElementById('content');
 
-      function escapeHtmlLocal(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      }
-
       function renderCpp() {
-        contentEl.innerHTML = '<pre><code class="language-cpp">' + escapeHtmlLocal(rawText) + '</code></pre>';
-        if (typeof hljs !== 'undefined') {
-          hljs.highlightAll();
-        }
+        contentEl.innerHTML = '';
+        var pre = document.createElement('pre');
+        var codeEl = document.createElement('code');
+        codeEl.className = 'language-cpp';
+        codeEl.textContent = rawText;   // ✅ 自动处理 < > &
+        pre.appendChild(codeEl);
+        contentEl.appendChild(pre);
+        if (typeof hljs !== 'undefined') hljs.highlightAll();
       }
 
       function renderMarkdown() {
@@ -246,11 +237,8 @@
       }
 
       function render() {
-        if (currentMode === 'cpp') {
-          renderCpp();
-        } else {
-          renderMarkdown();
-        }
+        if (currentMode === 'cpp') renderCpp();
+        else renderMarkdown();
       }
 
       document.querySelectorAll('#mode-switcher button').forEach(function(btn) {
@@ -274,7 +262,6 @@
 </body>
 </html>`;
 }
-
     // ---------- base64 编码（支持中文） ----------
     function toBase64(str) {
       const bytes = new TextEncoder().encode(str);
