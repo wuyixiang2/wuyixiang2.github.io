@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../github.min.css">
+  <script src="../highlight.min.js"></script>
+  <title>P4315 代码</title>
+  <style>
+    /* 极简样式，只保证代码可读 */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    pre {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+      tab-size: 4;
+    }
+    code {
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+  <pre><code class="language-cpp" id="codeBlock"></code></pre>
+  <script type="text/plain" id="rawCode">//P4315
+#include <iostream>
+#include <vector>
+#define int long long
+using namespace std;
+int dep[200005],son[200005],top[200005],ge[200005],fat[200005],id[200005],n,m,cnt;
+int a[200005],zu[200005],yo[200005],ch[200005];
+vector<int>ve[200005];
+void dfs(int x,int fa)
+{
+    dep[x] = dep[fa] + 1,ge[x] = 1,fat[x] = fa;
+    for(int i = 0;i < ve[x].size();i ++)
+    {
+        if(ve[x][i] == fa)continue ;
+        dfs(ve[x][i],x);
+        ge[x] += ge[ve[x][i]];
+        if(ge[son[x]] < ge[ve[x][i]])son[x] = ve[x][i];
+    }
+}
+void dfs2(int x,int y)
+{
+    top[x] = y,id[x] = ++cnt;
+    if(!son[x])return ;
+    dfs2(son[x],y);
+    for(int i = 0;i < ve[x].size();i ++)
+    {
+        if(ve[x][i] == son[x] || ve[x][i] == fat[x])continue ;
+        dfs2(ve[x][i],ve[x][i]);
+    }
+}
+struct node
+{
+    int ze,ye,sum,add,add2;
+}tr[800005];
+void pushup(int p)
+{
+    tr[p].sum = max(tr[p * 2 + 1].sum,tr[p * 2 + 2].sum);
+}
+void pushdown(int p)
+{
+    if(tr[p].add2 != -1)
+    {
+        tr[p * 2 + 1].sum = tr[p].add2,tr[p * 2 + 2].sum = tr[p].add2;
+        tr[p * 2 + 1].add2 = tr[p].add2,tr[p * 2 + 2].add2 = tr[p].add2;
+        tr[p * 2 + 1].add = tr[p * 2 + 2].add = 0;
+        tr[p].add2 = -1;
+    }
+    if(tr[p].add)
+    {
+        tr[p * 2 + 1].sum += tr[p].add,tr[p * 2 + 2].sum += tr[p].add;
+        tr[p * 2 + 1].add += tr[p].add,tr[p * 2 + 2].add += tr[p].add;
+        tr[p].add = 0;
+    }
+}
+void build(int p,int x,int y)
+{
+    tr[p] = {x,y,0,0,-1};
+    if(x == y){return ;}
+    build(p * 2 + 1,x,(x + y) >> 1);
+    build(p * 2 + 2,((x + y) >> 1) + 1,y);
+    pushup(p);
+}
+void jia(int x,int u,int v,int k)
+{
+	if(tr[x].ze == u && v == tr[x].ye)
+	{
+		tr[x].sum += k,tr[x].add += k;
+		return ;
+	}
+    pushdown(x);
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)jia(x * 2 + 1,u,min(v,mid),k);
+	if(v > mid)jia(x * 2 + 2,max(u,mid + 1),v,k);
+	pushup(x);
+}
+void cover(int x,int u,int v,int k)
+{
+	if(tr[x].ze == u && v == tr[x].ye)
+	{
+		tr[x].sum = k,tr[x].add2 = k;
+        tr[x].add = 0;
+		return ;
+	}
+    pushdown(x);
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)cover(x * 2 + 1,u,min(v,mid),k);
+	if(v > mid)cover(x * 2 + 2,max(u,mid + 1),v,k);
+	pushup(x);
+}
+int query(int x,int u,int v)
+{
+    pushdown(x);
+	int num = 0;
+	if(tr[x].ze == u && v == tr[x].ye)return tr[x].sum;
+	int mid = (tr[x].ze + tr[x].ye) >> 1;
+	if(u <= mid)num = max(num,query(x * 2 + 1,u,min(v,mid)));
+	if(v > mid)num = max(num,query(x * 2 + 2,max(u,mid + 1),v));
+	return num;
+}
+void add(int u,int v,int zh)
+{
+    while(top[u] != top[v])
+    {
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
+        jia(0,id[top[u]],id[u],zh);
+        u = fat[top[u]];
+    }
+    if(u == v)return ;
+    if(dep[u] < dep[v])jia(0,id[son[u]],id[v],zh);
+    else jia(0,id[son[v]],id[u],zh);
+}
+void change(int u,int v,int zh)
+{
+    while(top[u] != top[v])
+    {
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
+        cover(0,id[top[u]],id[u],zh);
+        u = fat[top[u]];
+    }
+    if(u == v)return ;
+    if(dep[u] < dep[v])cover(0,id[son[u]],id[v],zh);
+    else cover(0,id[son[v]],id[u],zh);
+}
+int lca2(int u,int v)
+{
+    int res = 0;
+    while(top[u] != top[v])
+    {
+        if(dep[top[u]] < dep[top[v]])swap(u,v);
+        res = max(res,query(0,id[top[u]],id[u]));
+        u = fat[top[u]];
+    }
+    if(dep[u] < dep[v])res = max(res,query(0,id[son[u]],id[v]));
+    else res = max(res,query(0,id[son[v]],id[u]));
+    return res;
+}
+signed main()
+{
+    cin >> n;
+    for(int i = 1;i < n;i ++)
+    {
+        int x,y;
+        cin >> x >> y;
+        ve[x].push_back(y),ve[y].push_back(x);
+        cin >> ch[i];zu[i] = x,yo[i] = y;
+	}
+    dfs(1,0);
+    dfs2(1,0);
+    build(0,1,n);
+    for(int i = 1;i < n;i ++)change(zu[i],yo[i],ch[i]);
+    for(int i = 1,y,z,zh;;i ++)
+    {
+        string x;
+        cin >> x;
+        if(x == "Stop")break ;
+        cin >> y >> z;
+        if(x == "Change")change(zu[y],yo[y],z);
+        else if(x == "Cover")cin >> zh,change(y,z,zh);
+        else if(x == "Add")cin >> zh,add(y,z,zh);
+        else cout << lca2(y,z) << '\n';
+    }
+}
+</script>
+
+<script src="highlight.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const raw = document.getElementById('rawCode').textContent;
+    const codeEl = document.getElementById('codeBlock');
+    codeEl.textContent = raw;
+    if (typeof hljs !== 'undefined') {
+      hljs.highlightElement(codeEl);
+    }
+  });
+</script>
