@@ -248,7 +248,7 @@ function buildPageHtml(id, code, title) {
         if (typeof hljs !== 'undefined') hljs.highlightAll();
       }
 
-      function renderMarkdown() {
+     function renderMarkdown() {
         if (typeof markdownit === 'undefined') {
           contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 markdown-it.min.js</p>';
           return;
@@ -257,7 +257,14 @@ function buildPageHtml(id, code, title) {
         var text = rawText;
         var mathStore = [];
       
-        // 只保护行内公式 $...$（不跨行）
+        // 先保护块级公式 $$...$$（可跨行）
+        text = text.replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, function(match) {
+          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
+          mathStore.push(match);
+          return key;
+        });
+      
+        // 再保护行内公式 $...$（不跨行）
         text = text.replace(/\\$([^$\\n]+?)\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
@@ -267,13 +274,10 @@ function buildPageHtml(id, code, title) {
         var md = markdownit({ html: false, linkify: true, breaks: false });
         var html = md.render(text);
       
-        // 把占位符换回原始公式
+        // 还原所有公式
         html = html.replace(/MATHPLACEHOLDER(\\d+)END/g, function(match, idx) {
           return mathStore[parseInt(idx, 10)];
         });
-      
-        // 两个相邻公式之间的 $$ 用一个空格隔开
-        html = html.replace(/\\$\\$/g, '$ $');
       
         contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
       
@@ -286,12 +290,12 @@ function buildPageHtml(id, code, title) {
         mathRetries = 0;
         tryMathJax();
       }
-
       function tryMathJax() {
         if (typeof renderMathInElement === 'function') {
           try {
             renderMathInElement(contentEl, {
               delimiters: [
+                {left: '$$', right: '$$', display: true},
                 {left: '$', right: '$', display: false}
               ],
               throwOnError: false
