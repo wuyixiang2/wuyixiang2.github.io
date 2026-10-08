@@ -80,7 +80,11 @@
 
   <label>编号（paste/ 后面的部分）</label>
   <input type="text" id="pasteId" placeholder="例如 2026100802">
-
+  
+  <!-- 新增：页面标题输入框 -->
+  <label>页面标题（留空则使用 paste/编号）</label>
+  <input type="text" id="pageTitle" placeholder="例如 P1505 代码">
+  
   <label>代码内容（直接粘贴原始 C++ 代码即可，无需转义）</label>
   <textarea id="codeInput" placeholder="在这里粘贴代码..."></textarea>
 
@@ -123,8 +127,49 @@
     }
 
     // ---------- 生成页面 HTML（风格与你现有页面一致） ----------
-    function buildPageHtml(id, code) {
-      return `<!DOCTYPE html>
+    function buildPageHtml(id, code, title) {
+  // 标题：优先用用户输入的，否则用 paste/编号
+    const rawTitle = (title && title.trim()) ? title.trim() : `paste/${id}`;
+    const pageTitle = escapeHtml(rawTitle);
+  
+    return `<!DOCTYPE html>
+            <html lang="zh">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${pageTitle}</title>
+              <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+              <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                  font-family: system-ui, -apple-system, sans-serif;
+                  background: #f8f9fa;
+                  padding: 16px;
+                  max-width: 1000px;
+                  margin: 0 auto;
+                }
+                pre {
+                  background: white;
+                  border: 1px solid #ccc;
+                  border-radius: 4px;
+                  padding: 16px;
+                  overflow-x: auto;
+                  font-family: "Consolas", "Monaco", "Courier New", monospace;
+                  font-size: 14px;
+                  line-height: 1.5;
+                  white-space: pre;
+                  tab-size: 4;
+                }
+                code { font-family: inherit; }
+              </style>
+            </head>
+            <body>
+              <pre><code class="language-cpp">${escapeHtml(code)}</code></pre>
+              <script>hljs.highlightAll();<\/script>
+            </body>
+            </html>`;
+      }
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
