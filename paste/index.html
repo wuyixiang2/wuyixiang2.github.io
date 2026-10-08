@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>paste</title>
+  <style>
+    /* 极简重置 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    #editor {
+      flex: 1;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 15px;
+      line-height: 1.5;
+      font-family: monospace;
+      resize: none;          /* 禁止手动调整大小，由 flex 自动填充 */
+      outline: none;
+      background: white;
+    }
+    #toolbar {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    #toolbar button {
+      padding: 8px 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    #toolbar button:hover {
+      background: #e9ecef;
+    }
+    #status {
+      font-size: 13px;
+      color: #6c757d;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <textarea id="editor" placeholder="在这里粘贴或输入内容..."></textarea>
+
+  <div id="toolbar">
+    <button id="copyBtn">复制全部</button>
+    <button id="clearBtn">清空</button>
+  </div>
+
+  <div id="status">就绪</div>
+
+  <script>
+    (function() {
+      const STORAGE_KEY = 'paste_content';   // localStorage 键名
+      const editor = document.getElementById('editor');
+      const copyBtn = document.getElementById('copyBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const status = document.getElementById('status');
+
+      // ---------- 加载已保存的内容 ----------
+      function loadContent() {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved !== null) {
+            editor.value = saved;
+          }
+        } catch (e) {
+          console.warn('读取本地存储失败');
+        }
+      }
+
+      // ---------- 保存内容到 localStorage（节流，避免频繁写入） ----------
+      let saveTimer = null;
+      function scheduleSave() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          try {
+            localStorage.setItem(STORAGE_KEY, editor.value);
+            status.textContent = '已自动保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
+          } catch (e) {
+            status.textContent = '保存失败：存储空间可能已满';
+          }
+        }, 300);   // 停止输入 300ms 后保存
+      }
+
+      // ---------- 复制全部内容到系统剪贴板 ----------
+      function copyAll() {
+        editor.select();
+        editor.setSelectionRange(0, editor.value.length);
+        try {
+          navigator.clipboard.writeText(editor.value).then(() => {
+            status.textContent = '已复制全部内容';
+          }).catch(() => {
+            // 降级方案：使用 document.execCommand
+            document.execCommand('copy');
+            status.textContent = '已复制全部内容（兼容模式）';
+          });
+        } catch (e) {
+          // 更老的降级
+          document.execCommand('copy');
+          status.textContent = '已复制全部内容（兼容模式）';
+        }
+        // 取消选中，避免影响后续编辑
+        window.getSelection().removeAllRanges();
+      }
+
+      // ---------- 清空内容 ----------
+      function clearAll() {
+        if (editor.value === '') return;
+        if (!confirm('确定要清空所有内容吗？此操作不可撤销。')) return;
+        editor.value = '';
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {}
+        status.textContent = '已清空';
+        editor.focus();
+      }
+
+      // ---------- 初始化 ----------
+      function init() {
+        loadContent();
+        editor.focus();
+
+        // 输入时自动保存
+        editor.addEventListener('input', scheduleSave);
+
+        // 按钮事件
+        copyBtn.addEventListener('click', copyAll);
+        clearBtn.addEventListener('click', clearAll);
+
+        // 快捷键：Ctrl/Cmd + S 手动保存（可选）
+        document.addEventListener('keydown', function(e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            try {
+              localStorage.setItem(STORAGE_KEY, editor.value);
+              status.textContent = '已手动保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            } catch (err) {
+              status.textContent = '保存失败';
+            }
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+
+</body>
+</html>
