@@ -73,10 +73,10 @@
   </details>
 
   <label>编号（paste/ 后面的部分）</label>
-  <input type="text" id="pasteId" placeholder="例如 2026100802">
+  <input type="text" id="pasteId" placeholder="编号">
 
   <label>页面标题（留空则使用 paste/编号）</label>
-  <input type="text" id="pageTitle" placeholder="例如 P1505 代码">
+  <input type="text" id="pageTitle" placeholder="标题">
 
   <label>代码内容（直接粘贴原始 C++ 代码即可，无需转义）</label>
   <textarea id="codeInput" placeholder="在这里粘贴代码..."></textarea>
@@ -369,7 +369,7 @@
         setStatus(
           '上传成功！\n' +
           'GitHub Pages 通常 1–2 分钟后生效。\n' +
-          '访问地址：https://paste.aaa.com/' + id
+          '访问地址：https://wuyixiang.me/paste/' + id
         , 'ok');
       } catch (e) {
         setStatus('出错：' + e.message, 'err');
