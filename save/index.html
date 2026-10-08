@@ -223,8 +223,24 @@
           contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 ../markdown-it.min.js</p>';
           return;
         }
+        var text = rawText;
+        var mathStore = [];
+        text = text.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
+          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
+          mathStore.push(match);
+          return key;
+        });
+        text = text.replace(/\$([^\$\n]+?)\$/g, function(match) {
+          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
+          mathStore.push(match);
+          return key;
+        });
         var md = markdownit({ html: false, linkify: true, breaks: false });
-        contentEl.innerHTML = '<div id="markdown-content">' + md.render(rawText) + '</div>';
+        var html = md.render(text);
+        html = html.replace(/MATHPLACEHOLDER(\d+)END/g, function(match, idx) {
+          return mathStore[parseInt(idx, 10)];
+        });
+        contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
         if (typeof hljs !== 'undefined') {
           document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
             hljs.highlightElement(block);
