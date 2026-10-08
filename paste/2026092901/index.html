@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>paste/2026092901</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    pre {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+      tab-size: 4;
+    }
+    code { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <pre><code class="language-cpp">#include &lt;iostream&gt;
+#include &lt;cmath&gt;
+#include &lt;map&gt;
+using namespace std;
+int n,m,add;
+double a[105][105],b[105],x[105],w[105];
+map&lt;string,int&gt;mp;
+void GaoSi()
+{
+    for(int i = 1;i &lt;= n;i ++)b[i] = 0;
+    for(int i = 1;i &lt;= m;i ++)
+    {
+        int r = 0;
+        for(int k = i;k &lt;= n;k ++)
+			if(fabs(a[k][i]) &gt; 0)//不为0，则交换
+			{
+				swap(a[i],a[k]);
+				swap(b[i],b[k]);
+				break ;
+			}
+		if(a[i][i] == 0)continue ;
+		for(int j = 1;j &lt; n;j ++)
+		{
+		    if(j + 1 == i)continue ;
+			double wj = (a[j + 1][i] / a[i][i]);//加减消元
+			for(int k = i;k &lt;= m;k ++)a[j + 1][k] -= a[i][k] * wj;
+			b[j + 1] -= b[i] * wj;
+		}
+    }
+    int ans = 0;
+    for(int i = 1;i &lt;= n;i ++)
+    {
+        for(int j = 1;j &lt;= m;j ++)
+            if(fabs(a[i][j]) &gt; 0.00001)
+            {
+                ans ++;
+                break ;
+            }
+    }
+    if(ans &lt; m)cout &lt;&lt; "Y\n";
+    else cout &lt;&lt; "N\n";
+}
+void solve()
+{
+    cin &gt;&gt; m;n = 0;
+    mp.clear();
+    for(int i = 1;i &lt;= m;i ++)
+    {
+        string s;
+        cin &gt;&gt; s;
+        int mo = 0;
+        for(int j = 0;j &lt; s.size();j ++)
+        {
+            if(s[j] &gt;= '0' &amp;&amp; s[j] &lt;= '9')
+            {
+                int k = j,ccnt = s[j] - '0';
+                while(k + 1 &lt; s.size() &amp;&amp; s[k + 1] &gt;= '0' &amp;&amp; s[k + 1] &lt;= '9')k ++,ccnt = ccnt * 10 + s[k] - '0';
+                string t = s.substr(mo,j - mo);
+                if(!mp[t])mp[t] = ++n;
+                a[mp[t]][i] = ccnt;
+                mo = k + 1,j = k;
+            }
+        }
+    }/*
+    for(int i = 1;i &lt;= n;i ++)
+    {
+        for(int j = 1;j &lt;= m;j ++)cout &lt;&lt; a[i][j] &lt;&lt; " ";
+        cout &lt;&lt; '\n';
+    }*/
+    GaoSi();
+    for(int i = 1;i &lt;= n;i ++)
+        for(int j = 1;j &lt;= m;j ++)a[i][j] = 0;
+}
+int main()
+{
+    int T;
+    cin &gt;&gt; T;
+    while(T --)solve();
+}
+ </code></pre>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>
