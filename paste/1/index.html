@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base href="/paste/">   <!-- 新增：固定基础路径 -->
-  <title>1</title>
+  <base href="/paste/">
+  <title>原神原神原神原神原神原神原神原神原神原神原神原神原神原神原神原神原神原神</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="markdown-it.min.js"></script>
-  <script>
-    MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
-  </script>
-  <script id="MathJax-script" async src="tex-mml-chtml.js"></script>
+ <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -26,6 +25,10 @@
       top: 10px;
       right: 50px;
       z-index: 9999;
+      user-select: none;  
+      -webkit-user-select: none;
+      -moz-user-select: none;    
+      -ms-user-select: none;   
     }
     #mode-switcher button {
       padding: 6px 12px;
@@ -62,6 +65,37 @@
       line-height: 1.6;
     }
     #markdown-content pre { border: 1px solid #eee; }
+    #markdown-content blockquote {
+      border-left: 4px solid #ccc;
+      padding-left: 12px;
+      margin: 8px 0;
+      color: #495057;
+    }
+    #markdown-content p {
+      margin: 6px 0;
+    }
+    #markdown-content h1,
+    #markdown-content h2,
+    #markdown-content h3,
+    #markdown-content h4 {
+      margin: 12px 0 6px 0;
+    }
+    #markdown-content ul,
+    #markdown-content ol {
+      margin: 6px 0;
+      padding-left: 24px;
+    }
+    #markdown-content code {
+      background: #f1f3f5;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 0.95em;
+    }
+    #markdown-content pre code {
+      background: transparent;
+      padding: 0;
+    }
   </style>
 </head>
 <body>
@@ -72,58 +106,88 @@
 
   <div id="content"></div>
 
-  <script>var RAW_CODE = "aaa\n\n$rr\\,rr$\n\n\n$rr\\;rr$";</script>
+  <textarea id="rawSource" style="display:none">$\Huge{\text{原神}}$
+
+$\Huge{\text{启动！！！！！！！！！！！！！！！！！！！！！！！！！！！}}$</textarea>
 
   <script>
     (function() {
-      var rawText = RAW_CODE;
+      var rawText = document.getElementById('rawSource').value;
       var currentMode = 'cpp';
       var contentEl = document.getElementById('content');
+      var mathRetries = 0;
 
       function renderCpp() {
         contentEl.innerHTML = '';
         var pre = document.createElement('pre');
         var codeEl = document.createElement('code');
         codeEl.className = 'language-cpp';
-        codeEl.textContent = rawText;   // ✅ 自动处理 < > &
+        codeEl.textContent = rawText;
         pre.appendChild(codeEl);
         contentEl.appendChild(pre);
         if (typeof hljs !== 'undefined') hljs.highlightAll();
       }
 
-      function renderMarkdown() {
+     function renderMarkdown() {
         if (typeof markdownit === 'undefined') {
-          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 ../markdown-it.min.js</p>';
+          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 markdown-it.min.js</p>';
           return;
         }
+      
         var text = rawText;
         var mathStore = [];
-        text = text.replace(/$$([sS]+?)$$/g, function(match) {
+      
+        // 先保护块级公式 $$...$$（可跨行）
+        text = text.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
-        text = text.replace(/$([^$
-]+?)$/g, function(match) {
+      
+        // 再保护行内公式 $...$（不跨行）
+        text = text.replace(/\$([^$\n]+?)\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
+      
         var md = markdownit({ html: false, linkify: true, breaks: false });
         var html = md.render(text);
-        html = html.replace(/MATHPLACEHOLDER(d+)END/g, function(match, idx) {
+      
+        // 还原所有公式
+        html = html.replace(/MATHPLACEHOLDER(\d+)END/g, function(match, idx) {
           return mathStore[parseInt(idx, 10)];
         });
+      
         contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
+      
         if (typeof hljs !== 'undefined') {
           document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
             hljs.highlightElement(block);
           });
         }
-        if (window.MathJax && MathJax.typesetPromise) {
-          MathJax.typesetPromise([contentEl]).catch(function(err) {
-            console.warn('MathJax 渲染错误:', err);
-          });
+      
+        mathRetries = 0;
+        tryMathJax();
+      }
+      function tryMathJax() {
+        if (typeof renderMathInElement === 'function') {
+          try {
+            renderMathInElement(contentEl, {
+              delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+              ],
+              throwOnError: false
+            });
+          } catch (err) {
+            console.error('[KaTeX] error:', err);
+          }
+        } else if (mathRetries < 30) {
+          mathRetries++;
+          setTimeout(tryMathJax, 200);
+        } else {
+          console.warn('[KaTeX] not ready after 6s');
         }
       }
 
@@ -143,11 +207,7 @@
         });
       });
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', render);
-      } else {
-        render();
-      }
+      render();
     })();
   </script>
 </body>
