@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base href="/paste/">
-  <title>Chinese can fly</title>
+  <title>Test!!!!!</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="markdown-it.min.js"></script>
@@ -106,9 +106,302 @@
 
   <div id="content"></div>
 
-  <textarea id="rawSource" style="display:none"># Chinese can fly
+  <textarea id="rawSource" style="display:none">~~这是一个 Test,liruixiong0101 可以自行选择是否覆盖。~~
 
-大家好啊，我是说的道理</textarea>
+## 线性代数
+
+不要问线性代数的定义是什么，实际上是~~我也不知道~~
+
+这一讲主要有两个：
+
+- 【模板】矩阵快速幂	
+
+- 【模板】高斯消元法	
+
+### 矩阵快速幂
+
+先讲矩阵快速幂。但是在这里之前，我们得先了解一下什么是矩阵。
+
+在输入中，我们经常看到：
+
+&gt; 后输入 $n$ 行，每行 $m$ 个数 $A_{i,j}$。
+
+事实上，输入的 $A$ 就是一个矩阵。注意矩阵通常大写。
+
+它通常用 $\begin{bmatrix}\end{bmatrix}$ 来表示（你可以理解为稍微大一点的中括号）。
+
+如 $A$ 可以表示为 $\begin{bmatrix}a&amp;b&amp;c\\d&amp;e&amp;f\\g&amp;h&amp;i\end{bmatrix}$。
+
+矩阵有没有基本运算呢？当然有。首先理解一下矩阵的加法：就是两个**长宽一模一样的矩阵**，对应的位置分别相加，即可得到相加后的矩阵。如 $\begin{bmatrix}a&amp;b&amp;c\\d&amp;e&amp;f\\g&amp;h&amp;i\end{bmatrix} + \begin{bmatrix}j&amp;k&amp;l\\m&amp;n&amp;o\\p&amp;q&amp;r\end{bmatrix} = \begin{bmatrix}a + j&amp;b + k&amp;c + l\\d + m&amp;e + n&amp;f + o\\g + p&amp;h + q&amp;i + r\end{bmatrix}$。
+
+当然矩阵还可以乘法运算。注意乘法和加法的运算法则不相同，只要满足**第一个矩阵的宽与第二个矩阵的长相等即可**。如第一个矩阵的大小为 $n \times m$，则第二个矩阵的长必须为 $m$，即大小为 $m \times q$。它们两个相乘可以得到一个 $n \times q$ 的矩阵。从中可以看到，如果交换两个矩阵的位置会得到 $m \times q$ 和 $n \times m$ 的矩阵，当 $q \neq n$ 时，两个矩阵不能直接相乘，所以矩阵**不满足交换律**。
+
+这里有两个概念：向量和点乘。因为这不是重点，所以快速的过一下：$(a_1,a_2,a_3,a_4,...,a_n) \times (b_1,b_2,b_3,b_4,...,b_n) = a_1 \times b_1 + a_2 \times b_2 + a_3 \times b_3 + a_4 \times b_4 + ... + a_n \times b_n$。其中 $a,b$ 是一个向量，结果是一个**数**。因为是一个数，所以我们就能进行矩阵乘法。
+
+在矩阵乘法中，我们可以将第一个矩阵看成 $n$ 个排成一行一行的向量，把第二个矩阵看成 $m$ 个排成一列一列的向量。答案即为它们两两点乘得出来的一个矩阵。形式化来说，答案 $Ans_{i,j} = \sum\limits_{k = 1}^{m}a_{i,k} \times b_{k,j}$。如两个矩阵 $\begin{bmatrix}1&amp;2&amp;3\\4&amp;5&amp;6\end{bmatrix} \times \begin{bmatrix}7&amp;8\\9&amp;10\\11&amp;12\end{bmatrix} = \begin{bmatrix}1 \times 7 + 2 \times 9 + 3 \times 11&amp;1 \times 8 + 2 \times 10 + 3 \times 12\\4 \times 7 + 5 \times 9 + 6 \times 11&amp;4 \times 8 + 5 \times 10 + 6 \times 12\end{bmatrix} = \begin{bmatrix}58&amp;64\\139&amp;154\end{bmatrix}$ 。它们相乘的结果满足上面那条公式。矩阵乘法的例题有[B3615](https://www.luogu.com.cn/problem/B3615)。
+
+```cpp
+for(int i = 0;i &lt; n;i ++)
+    for(int j = 0;j &lt; q;j ++)
+        for(int k = 0;k &lt; m;k ++)
+            ans[i][j] += a[i][k] * b[k][j];
+//注意：B3615的两个矩阵的长和宽均为512，并用N代替，所以该模板题的n,q,m可直接用N代替
+```
+特殊矩阵：
+
+单位矩阵 $I$：即 $\begin{bmatrix}1&amp;0&amp;0&amp;0&amp;\cdots&amp;0\\0&amp;1&amp;0&amp;0&amp;\cdots&amp;0\\0&amp;0&amp;1&amp;0&amp;\cdots&amp;0\\0&amp;0&amp;0&amp;1&amp;\cdots&amp;0\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;1\end{bmatrix}$，对角线为 $1$，其余为 $0$，与它的长相同的矩阵乘以该单位矩阵仍得原矩阵。
+
+零矩阵：$\begin{bmatrix}0&amp;0&amp;0&amp;0&amp;\cdots&amp;0\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;0\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;0\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;0\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;0\end{bmatrix}$矩阵所有区域均为 $0$。与它的长相同的矩阵乘以该矩阵等于零矩阵。
+
+矩阵乘法跟快速幂有什么关系呢？我们都知道，在乘法中，是允许有 $a^2$ 自己乘自己的情况出现的。矩阵的长宽一般不同，不能进行自乘，但是**方阵**是一个例外。方阵是指长宽相等的矩阵，因为它的特殊性，使得它可以自乘，记作 $A^b$。模板题[P3390](https://www.luogu.com.cn/problem/P3390)也强调了矩阵的长和宽均为 $n$。
+
+再说一下快速幂。当 $b$ 的大小特别大时，低效率的乘法（复杂度为 $\mathcal{O(nmq)}$） 显然不支持这种运算。联想到整数中有[快速幂](https://www.luogu.com.cn/problem/P1226)，矩阵也有没有矩阵的快速幂呢？答案是有。我们可以把矩阵的系数 $b$ 拆成二进制，依次倍增求解。这是快速幂的模板：
+
+```cpp
+while(b &gt; 0)
+{
+    if(b &amp; 1)v = v * a % p;
+    a = a * a % p;
+    b &gt;&gt;= 1;
+}
+```
+
+这是矩阵快速幂的模板（其实没有区别）：
+
+```cpp
+while(b &gt; 0)
+{
+    if(b &amp; 1)v = v * A;
+    A = A * A;
+    b &gt;&gt;= 1;
+}
+```
+
+（注意，这里只有快速幂的代码）
+
+但是在矩阵中是没有 `*` 这种运算的，我们需要重载定义这种运算。它可以直接在结构体里定义。一个矩阵的结构体长这样：
+
+```cpp
+struct node
+{
+    int n,m;//矩阵的长和宽
+    int a[105][105];//矩阵每个位置的数值
+    node operator*(node b)//重载 '*' 号 
+    {
+        node r = {n,b.m};//定义答案的长和宽
+        for(int i = 1;i &lt;= n;i ++)
+            for(int j = 1;j &lt;= b.m;j ++)
+                for(int k = 1;k &lt;= m;k ++)
+                    r.a[i][j] = (r.a[i][j] + a[i][k] * b.a[k][j]) % mod;//矩阵乘法
+        return r;//返回答案
+    }
+};
+```
+
+这样你就可以直接使用乘法了。（如果真的不想这么做，也可以使用函数）
+
+最后的一个问题：矩阵的初始化？设成单位矩阵即可。如果设成零矩阵将会永远得到零矩阵的结果。（得不偿失）
+
+这就是模板题的代码了。
+
+```cpp
+#include &lt;iostream&gt;
+#define int long long
+using namespace std;
+int mod = 1e9 + 7;
+struct node
+{
+    int n,m;
+    int a[105][105];
+    node operator*(node b) 
+    {
+        node r = {n,b.m};
+        for(int k = 1;k &lt;= m;k ++)
+            for(int i = 1;i &lt;= n;i ++)
+                for(int j = 1;j &lt;= b.m;j ++)
+                    r.a[i][j] = (r.a[i][j] + a[i][k] * b.a[k][j]) % mod;
+        return r;
+    }
+}A;
+long long n,k;
+void fpow(int b)
+{
+    node v = {n,n};
+    for(int i = 1;i &lt;= n;i ++)v.a[i][i] = 1;//单位矩阵
+    while(b &gt; 0)
+	{
+		if(b &amp; 1)v = v * A;
+		A = A * A;
+		b &gt;&gt;= 1;
+	}
+	for(int i = 1;i &lt;= n;i ++)//输出
+	{
+	    for(int j = 1;j &lt;= n;j ++)cout &lt;&lt; v.a[i][j] &lt;&lt; " ";
+	    cout &lt;&lt; '\n';
+    }
+}
+signed main()
+{
+    cin &gt;&gt; n &gt;&gt; k;
+    A.n = n,A.m = n;
+    for(int i = 1;i &lt;= n;i ++)
+        for(int j = 1;j &lt;= n;j ++)cin &gt;&gt; A.a[i][j];
+    fpow(k);
+}
+```
+
+矩阵快速幂有什么用？它可以快速的解决很多递推式子。模板题：[P1962](https://www.luogu.com.cn/problem/P1962)
+
+这道题 $n$ 达到了 $10^9$（虽然可能有些机子能勉强跑过），普通的递推肯定是不行了。这种情况下矩阵快速幂的优势很快就显现了。
+
+我们想要的数是 $F_n$，也可以是矩阵 $\begin{bmatrix}F_n&amp;F_{n - 1}\end{bmatrix}$。假设现在我们已知矩阵 $\begin{bmatrix}F_{n - 1}&amp;F_{n - 2}\end{bmatrix}$，我们可以乘什么矩阵得到 $\begin{bmatrix}F_n&amp;F_{n - 1}\end{bmatrix}$ 呢？答案是 $\begin{bmatrix}1&amp;1\\1&amp;0\end{bmatrix}$。两个矩阵相乘后，正好能得到矩阵 $\begin{bmatrix}F_{n - 1} \times 1+ F_{n - 2} \times 1&amp;F_{n - 1} \times 1 + F_{n - 2} \times 0\end{bmatrix} = \begin{bmatrix}F_n&amp;F_{n - 1}\end{bmatrix}$。继续深入，我们还会得到 $\begin{bmatrix}F_{n - 2}&amp;F_{n - 3}\end{bmatrix} \times \begin{bmatrix}1&amp;1\\1&amp;0\end{bmatrix}^2 = \begin{bmatrix}F_{n}&amp;F_{n - 1}\end{bmatrix}$，$\begin{bmatrix}F_{n - 3}&amp;F_{n - 4}\end{bmatrix} \times \begin{bmatrix}1&amp;1\\1&amp;0\end{bmatrix}^3 = \begin{bmatrix}F_{n}&amp;F_{n - 1}\end{bmatrix}$，
+$\begin{bmatrix}F_{2}&amp;F_1\end{bmatrix} \times \begin{bmatrix}1&amp;1\\1&amp;0\end{bmatrix}^{n - 2} = \begin{bmatrix}F_{n}&amp;F_{n - 1}\end{bmatrix}$。而 $\begin{bmatrix}F_{2}&amp;F_1\end{bmatrix}$ 我们可以直接得到，$\begin{bmatrix}1&amp;1\\1&amp;0\end{bmatrix}^{n - 2}$ 可以用矩阵快速幂来求，所以它们两个值相乘得出来的矩阵的第一个数就是 $F_n$ 了。类似地，如果递推式子为 $F_n = a \times F_{n - 1} + b \times F_{n - 2}$，将 $\begin{bmatrix}1&amp;1\\1&amp;0\end{bmatrix}^{n - 2}$ 改为 $\begin{bmatrix}a&amp;1\\b&amp;0\end{bmatrix}^{n - 2}$ 即可。所以，我们可以直接将复杂度 $\mathcal{O(n)}$ 压缩到了 $\mathcal{O(\log n)}$（有 $8$ 倍常数），是可行方案里特别优的了。
+
+```
+#include &lt;iostream&gt;
+using namespace std;
+int mod = 1e9 + 7;
+struct node
+{
+    int n,m;
+    int a[5][5];
+    node operator*(node b) 
+    {
+        node r = {n,b.m};
+        for(int k = 1;k &lt;= m;k ++)
+            for(int i = 1;i &lt;= n;i ++)
+                for(int j = 1;j &lt;= b.m;j ++)
+                    r.a[i][j] = (r.a[i][j] + a[i][k] * b.a[k][j]) % mod;
+        return r;
+    }
+}A,B;
+long long nr,k;
+node fpow(int w)
+{
+    node v = {nr,nr};
+    for(int i = 1;i &lt;= nr;i ++)v.a[i][i] = 1;
+    while(w &gt; 0)
+	{
+		if(w &amp; 1)v = v * A;
+		A = A * A;
+		w &gt;&gt;= 1;
+	}
+	return v;
+}
+signed main()
+{
+    cin &gt;&gt; k;
+    nr = 2;//矩阵大小
+    A.n = nr,A.m = nr;
+    A.a[1][1] = A.a[1][2] = A.a[2][1] = 1;//赋值
+    B.a[1][1] = B.a[1][2] = 1;
+    node rt = {1,2},Ao = fpow(k - 2);
+    for(int k = 1;k &lt;= 2;k ++)
+        for(int i = 1;i &lt;= 1;i ++)
+            for(int j = 1;j &lt;= Ao.m;j ++)
+                rt.a[i][j] = (rt.a[i][j] + B.a[i][k] * Ao.a[k][j]) % mod;//两矩阵相乘
+    cout &lt;&lt; rt.a[1][1];
+}
+```
+
+（以前写的，不喜勿喷）
+
+类似的例题还有 P1939，P2044 和 P1349。大家可以尝试一下。
+
+### 高斯消元
+
+它的一个[模板](https://www.luogu.com.cn/problem/P3389)
+
+你可能也会惊讶我们经常学习的多元一次方程组竟然是道蓝题。
+
+这个算法的本质就是加减消元。
+
+我们可以把系数、未知数、结果各看成一个矩阵，得到： $\begin{bmatrix}a_{1,1}&amp;a_{1,2}&amp;a_{1,3}&amp;a_{1,4}&amp;\cdots&amp;a_{1,n}\\a_{2,1}&amp;a_{2,2}&amp;a_{2,3}&amp;a_{2,4}&amp;\cdots&amp;a_{2,n}\\a_{3,1}&amp;a_{3,2}&amp;a_{3,3}&amp;a_{3,4}&amp;\cdots&amp;a_{3,n}\\a_{4,1}&amp;a_{4,2}&amp;a_{4,3}&amp;a_{4,4}&amp;\cdots&amp;a_{4,n}\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots\\a_{n,1}&amp;a_{n,2}&amp;a_{n,3}&amp;a_{n,4}&amp;\cdots&amp;a_{n,n}\end{bmatrix} \times \begin{bmatrix}x_1\\x_2\\x_3\\x_4\\\vdots\\x_n\end{bmatrix} = \begin{bmatrix}b_1\\b_2\\b_3\\b_4\\\vdots\\b_n\end{bmatrix}$
+
+现在我们需要对系数矩阵加减实现消元。
+
+如果把矩阵消成这样：
+
+$\begin{bmatrix}a_{1,1}&amp;a_{1,2}&amp;a_{1,3}&amp;a_{1,4}&amp;\cdots&amp;a_{1,n}\\0&amp;a_{2,2}&amp;a_{2,3}&amp;a_{2,4}&amp;\cdots&amp;a_{2,n}\\0&amp;0&amp;a_{3,3}&amp;a_{3,4}&amp;\cdots&amp;a_{3,n}\\0&amp;0&amp;0&amp;a_{4,4}&amp;\cdots&amp;a_{4,n}\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;a_{n,n}\end{bmatrix}$
+
+我们可以直接得出 $x_n$ 的值为 $\frac{b_n}{a_{n,n}}$。将 $x_n$ 代入可得 $x_{n - 1} = \frac{b_{n - 1} - x_n \times a_{n - 1,n}}{a_{n - 1,n - 1}}$，$x_{n - 2} = \frac{b_{n - 2} - x_n \times a_{n - 2,n} - x_{n - 1} \times a_{n - 2,n - 1}}{a_{n - 2,n - 2}}$，以此类推，可以推出所有的未知数。
+
+现在的问题转换为了如何将左下角全部消成 `0`。这个可以一列一列地解决。
+
+首先我们将第一列化为 $0$。我们只需要用第二行减去第一行乘上若干倍、第三行减去第一行乘上若干倍，以此类推，就能实现第一列全部变为 $0$。随后我们以 $a_{2,2}$ 为左上角，$a_{n,n}$ 为右下角为一个子矩阵，进行递归操作（和前一段的操作一样）。当进行了 $n - 1$ 次递归之后，就消元完成了，最后直接解出答案。
+
+但是事情不总是那么完美的。有可能一次多消了数，导致 $a_{i,i}$ 为 $0$，即除数为 $0$ 时，就会出错。为了避免这种情况，我们需要用这一行和下面几行中 $a_{j,i} \neq 0$ 的一行交换，就能避免错误。
+
+在这个模板中，还需要解决是否唯一解。这个很简单，如果一列的未知数项都被抵消干净了，说明肯定不是唯一解，输出 `No Solution`。
+
+Tips:因为不一定用整数倍的乘积进行消元，所以最好使用 `double` 存储数据。
+
+下面是高斯消元的代码。
+
+```cpp
+#include &lt;iostream&gt;
+#include &lt;cmath&gt;
+using namespace std;
+int n;
+double a[105][105],b[105],x[105],w[105];
+void GaoSi()
+{
+    for(int i = 1;i &lt;= n;i ++)
+    {
+        int r = 0;
+        for(int k = i;k &lt;= n;k ++)
+			if(fabs(a[k][i]) &gt; 0)//不为0，则交换
+			{
+				swap(a[i],a[k]);
+				swap(b[i],b[k]);
+				break ;
+			}
+		if(fabs(a[i][i]) == 0)//仍然为0，直接输出No Solution
+		{
+		    cout &lt;&lt; "No Solution";
+		    exit(0);
+		}
+		for(int j = i;j &lt; n;j ++)
+		{
+			double wj = (a[j + 1][i] / a[i][i]);//加减消元
+			for(int k = i;k &lt;= n;k ++)a[j + 1][k] -= a[i][k] * wj;
+			b[j + 1] -= b[i] * wj;
+		}
+    }
+}
+void Qiuzhi()
+{
+	for(int i = n;i &gt;= 1;i --)//求出未知数
+	{
+		for(int j = n;j &gt; i;j --)b[i] -= a[i][j] * x[j];
+		x[i] = b[i] / a[i][i];
+	}
+}
+int main()
+{
+    cin &gt;&gt; n;
+    for(int i = 1;i &lt;= n;i ++)
+    {
+        for(int j = 1;j &lt;= n;j ++)cin &gt;&gt; a[i][j];
+        cin &gt;&gt; b[i];
+    }
+    GaoSi();
+    Qiuzhi();
+    for(int i = 1;i &lt;= n;i ++)
+    	printf("%.2lf\n",x[i]);
+}
+```
+
+它有一个加强版：[P2455](https://www.luogu.com.cn/problem/P2455)。在这道题中，你还要判断是否无穷解还是无解。虽然题是毒瘤了一点，但是基本方法还是一样。判断无解和无穷解的方法：
+
+- 1.如果已经推导出矛盾，则一定无解；
+- 2.当方程左边系数全部为 $0$，而右边不为 $0$ 时，方程一定无解；
+- 3.当方程左边系数全部为 $0$，而右边也为 $0$ 时，方程一定为**无穷解和无解**之一；
+- 4.当一列全部为 $0$ 时，先跳过，因为无法判断是无解还是无穷解。
+
+代码就不放了。
+
+以上就是关于线性代数的部分内容。（组合数学放在下一篇）</textarea>
 
   <script>
     (function() {
