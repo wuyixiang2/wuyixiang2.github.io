@@ -260,15 +260,11 @@ function buildPageHtml(id, code, title) {
       
         var text = rawText;
         var mathStore = [];
-      
-        // 先保护块级公式 $$...$$（可跨行）
         text = text.replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
           return key;
         });
-      
-        // 再保护行内公式 $...$（不跨行）
         text = text.replace(/\\$([^$\\n]+?)\\$/g, function(match) {
           var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
           mathStore.push(match);
@@ -277,10 +273,9 @@ function buildPageHtml(id, code, title) {
       
         var md = markdownit({ html: false, linkify: true, breaks: false });
         var html = md.render(text);
-      
-        // 还原所有公式
         html = html.replace(/MATHPLACEHOLDER(\\d+)END/g, function(match, idx) {
-          return mathStore[parseInt(idx, 10)];
+          var formula = mathStore[parseInt(idx, 10)];
+          return formula.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         });
       
         contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
