@@ -89,7 +89,7 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://tsizgxzjylnbtrpczeyj.supabase.c';
+    const SUPABASE_URL = 'https://tsizgxzjylnbtrpczeyj.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzaXpneHpqeWxuYnRycGN6ZXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NjcyMzksImV4cCI6MjEwNzM0MzIzOX0.NoQf2rH5Kl6fbohNARIkF6ZLXtiWGcBUXTExzeJS3is';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -182,7 +182,7 @@
     async function sendMessage() {
       const text = input.value.trim();
       if (text === '') {
-        alert('Can't send an empty message!');
+        alert('Can\'t send an empty message!');
         return;
       }
 
