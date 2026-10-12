@@ -4,13 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>paste</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* 极简重置 */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: #f8f9fa;
@@ -29,8 +25,8 @@
       border-radius: 4px;
       font-size: 15px;
       line-height: 1.5;
-      font-family: monospace;
-      resize: none;          /* 禁止手动调整大小，由 flex 自动填充 */
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      resize: none;
       outline: none;
       background: white;
     }
@@ -48,14 +44,14 @@
       font-size: 15px;
       cursor: pointer;
     }
-    #toolbar button:hover {
-      background: #e9ecef;
-    }
+    #toolbar button:hover { background: #e9ecef; }
     #status {
       font-size: 13px;
       color: #6c757d;
       margin-top: 4px;
     }
+    #status.ok { color: #0a7c2f; }
+    #status.err { color: #c92a2a; }
   </style>
 </head>
 <body>
@@ -67,107 +63,132 @@
     <button id="clearBtn">清空</button>
   </div>
 
-  <div id="status">就绪</div>
+  <div id="status">连接中...</div>
 
   <script>
-    (function() {
-      const STORAGE_KEY = 'paste_content';   // localStorage 键名
-      const editor = document.getElementById('editor');
-      const copyBtn = document.getElementById('copyBtn');
-      const clearBtn = document.getElementById('clearBtn');
-      const status = document.getElementById('status');
+    const SUPABASE_URL = 'https://csgdiykteirmaokvraqu.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzZ2RpeWt0ZWlybWFva3ZyYXF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NjgzNjAsImV4cCI6MjEwNzM0NDM2MH0.QiajIsyTQCTzZ_50pBUXPah00D4lwUdEWc4AjYH6BQo';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const editor = document.getElementById('editor');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const status = document.getElementById('status');
+    let lastSyncedContent = '';
+    let isEditing = false;
+    let saveTimer = null;
+    function setStatus(msg, type) {
+      status.textContent = msg;
+      status.className = type || '';
+    }
+    async function loadFromCloud() {
+      const { data, error } = await supabaseClient
+        .from('paste_board')
+        .select('content, updated_at')
+        .eq('id', 1)
+        .single();
 
-      // ---------- 加载已保存的内容 ----------
-      function loadContent() {
-        try {
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved !== null) {
-            editor.value = saved;
-          }
-        } catch (e) {
-          console.warn('读取本地存储失败');
-        }
+      if (error) {
+        console.error('读取失败:', error);
+        setStatus('读取失败，请刷新重试', 'err');
+        return;
       }
 
-      // ---------- 保存内容到 localStorage（节流，避免频繁写入） ----------
-      let saveTimer = null;
-      function scheduleSave() {
-        if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => {
-          try {
-            localStorage.setItem(STORAGE_KEY, editor.value);
-            status.textContent = '已自动保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
-          } catch (e) {
-            status.textContent = '保存失败：存储空间可能已满';
-          }
-        }, 300);   // 停止输入 300ms 后保存
+      editor.value = data.content || '';
+      lastSyncedContent = data.content || '';
+      setStatus('已连接 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }), 'ok');
+    }
+    async function saveToCloud() {
+      const content = editor.value;
+      if (content === lastSyncedContent) return;
+
+      const { error } = await supabaseClient
+        .from('paste_board')
+        .update({ content: content, updated_at: new Date().toISOString() })
+        .eq('id', 1);
+
+      if (error) {
+        console.error('保存失败:', error);
+        setStatus('保存失败：' + error.message, 'err');
+        return;
       }
 
-      // ---------- 复制全部内容到系统剪贴板 ----------
-      function copyAll() {
-        editor.select();
-        editor.setSelectionRange(0, editor.value.length);
-        try {
-          navigator.clipboard.writeText(editor.value).then(() => {
-            status.textContent = '已复制全部内容';
-          }).catch(() => {
-            // 降级方案：使用 document.execCommand
-            document.execCommand('copy');
-            status.textContent = '已复制全部内容（兼容模式）';
-          });
-        } catch (e) {
-          // 更老的降级
-          document.execCommand('copy');
-          status.textContent = '已复制全部内容（兼容模式）';
-        }
-        // 取消选中，避免影响后续编辑
-        window.getSelection().removeAllRanges();
-      }
-
-      // ---------- 清空内容 ----------
-      function clearAll() {
-        if (editor.value === '') return;
-        if (!confirm('确定要清空所有内容吗？此操作不可撤销。')) return;
-        editor.value = '';
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-        } catch (e) {}
-        status.textContent = '已清空';
-        editor.focus();
-      }
-
-      // ---------- 初始化 ----------
-      function init() {
-        loadContent();
-        editor.focus();
-
-        // 输入时自动保存
-        editor.addEventListener('input', scheduleSave);
-
-        // 按钮事件
-        copyBtn.addEventListener('click', copyAll);
-        clearBtn.addEventListener('click', clearAll);
-
-        // 快捷键：Ctrl/Cmd + S 手动保存（可选）
-        document.addEventListener('keydown', function(e) {
-          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            try {
-              localStorage.setItem(STORAGE_KEY, editor.value);
-              status.textContent = '已手动保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
-            } catch (err) {
-              status.textContent = '保存失败';
+      lastSyncedContent = content;
+      setStatus('已同步 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }), 'ok');
+    }
+    function scheduleSave() {
+      isEditing = true;
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(async function() {
+        await saveToCloud();
+        isEditing = false;
+      }, 600);
+    }
+    function subscribeRealtime() {
+      supabaseClient
+        .channel('public:paste_board')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'paste_board', filter: 'id=eq.1' },
+          function(payload) {
+            const remoteContent = payload.new.content || '';
+            if (remoteContent === lastSyncedContent) return;
+            if (isEditing) return;
+            if (remoteContent === editor.value) {
+              lastSyncedContent = remoteContent;
+              return;
             }
+            editor.value = remoteContent;
+            lastSyncedContent = remoteContent;
+            setStatus('已同步远端更新 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }), 'ok');
           }
+        )
+        .subscribe(function(s) {
+          console.log('[Realtime] 订阅状态:', s);
         });
+    }
+    function copyAll() {
+      editor.select();
+      editor.setSelectionRange(0, editor.value.length);
+      try {
+        navigator.clipboard.writeText(editor.value).then(function() {
+          setStatus('已复制全部内容', 'ok');
+        }).catch(function() {
+          document.execCommand('copy');
+          setStatus('已复制全部内容（兼容模式）', 'ok');
+        });
+      } catch (e) {
+        document.execCommand('copy');
+        setStatus('已复制全部内容（兼容模式）', 'ok');
       }
+      window.getSelection().removeAllRanges();
+    }
+    async function clearAll() {
+      if (editor.value === '') return;
+      if (!confirm('确定要清空所有内容吗？此操作会同步到所有设备，不可撤销。')) return;
+      editor.value = '';
+      await saveToCloud();
+      editor.focus();
+    }
+    async function init() {
+      await loadFromCloud();
+      subscribeRealtime();
+      editor.addEventListener('input', scheduleSave);
+      copyBtn.addEventListener('click', copyAll);
+      clearBtn.addEventListener('click', clearAll);
+      document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          if (saveTimer) clearTimeout(saveTimer);
+          saveToCloud();
+        }
+      });
+    }
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-      } else {
-        init();
-      }
-    })();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 
 </body>
