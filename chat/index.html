@@ -4,13 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>chatroom</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* 极简重置，仅保证功能可见 */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: #f8f9fa;
@@ -41,7 +37,6 @@
       color: #0b5e7c;
       margin-right: 12px;
     }
-    /* Anonymous 用户使用灰色，以示区分（非美化，仅功能性区分） */
     .message-user.anonymous {
       color: #6c757d;
       font-weight: normal;
@@ -79,153 +74,155 @@
       font-size: 15px;
       cursor: pointer;
     }
-    #send-btn:hover {
-      background: #0b5ed7;
-    }
-    .empty-tip {
-      color: #6c757d;
-      text-align: center;
-      padding: 30px 0;
-    }
-    /* 当前身份提示（极简文字，无美化） */
-    #identity-hint {
-      font-size: 14px;
-      color: #495057;
-      margin-bottom: 6px;
-    }
+    #send-btn:hover { background: #0b5ed7; }
+    .empty-tip { color: #6c757d; text-align: center; padding: 30px 0; }
+    #identity-hint { font-size: 14px; color: #495057; margin-bottom: 6px; }
   </style>
 </head>
 <body>
 
-  <div id="identity-hint"></div>   <!-- 显示当前聊天身份 -->
-  <div id="message-container">
-    <!-- 消息会动态渲染到这里 -->
-  </div>
+  <div id="identity-hint"></div>
+  <div id="message-container"></div>
   <div id="input-area">
-    <input type="text" id="msg-input" placeholder="Input your messages here..." />
+    <input type="text" id="msg-input" placeholder="Input your message here..." />
     <button id="send-btn">Send</button>
   </div>
-  <script>
-    (function() {
-      const STORAGE_KEY = 'chatroom_messages';
-      const MAX_MESSAGES = 5000;  
-      const container = document.getElementById('message-container');
-      const input = document.getElementById('msg-input');
-      const sendBtn = document.getElementById('send-btn');
-      const identityHint = document.getElementById('identity-hint');
-      function getCurrentUser() {
-        const nickname = localStorage.getItem('userNickname');
-        if (nickname && nickname.trim() !== '') {
-          return nickname.trim();
-        }
-        return 'Anonymous';
-      }
-      function loadMessages() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed : [];
-          }
-        } catch (e) {
-          console.warn('reading failed');
-        }
-        return [];
-      }
-      function saveMessages(messages) {
-        if (messages.length > MAX_MESSAGES) {
-          messages = messages.slice(-MAX_MESSAGES);
-        }
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-        } catch (e) {
-          console.warn('存储消息失败:', e);
-        }
-      }
-      function renderMessages() {
-        const messages = loadMessages();
-        container.innerHTML = '';
-        if (messages.length === 0) {
-          const emptyDiv = document.createElement('div');
-          emptyDiv.className = 'empty-tip';
-          emptyDiv.textContent = 'No message here';
-          container.appendChild(emptyDiv);
-          return;
-        }
-        messages.forEach(msg => {
-          const item = document.createElement('div');
-          item.className = 'message-item';
-          const userSpan = document.createElement('span');
-          userSpan.className = 'message-user';
-          const userName = msg.user || 'Anonymous';
-          userSpan.textContent = userName;
-          if (userName === 'Anonymous') {
-            userSpan.classList.add('anonymous');
-          }
-          const timeSpan = document.createElement('span');
-          timeSpan.className = 'message-time';
-          let timeStr = '未知时间';
-          if (msg.time) {
-            try {
-              const date = new Date(msg.time);
-              if (!isNaN(date.getTime())) {
-                timeStr = date.toLocaleString('zh-CN', { hour12: false });
-              }
-            } catch (e) {}
-          }
-          timeSpan.textContent = timeStr;
-          const textDiv = document.createElement('div');
-          textDiv.className = 'message-text';
-          textDiv.textContent = msg.text || '';
-          item.appendChild(userSpan);
-          item.appendChild(timeSpan);
-          item.appendChild(textDiv);
-          container.appendChild(item);
-        });
-        container.scrollTop = container.scrollHeight;
-      }
-      function updateIdentityHint() {
-        const user = getCurrentUser();
-        identityHint.textContent = 'Your name:' + user;
-      }
-      function sendMessage() {
-        const text = input.value.trim();
-        if (text === '') {
-          alert('Can\'t send an empty message!');
-          return;
-        }
-        const user = getCurrentUser();
-        const now = new Date().toISOString();
-        const messages = loadMessages();
-        messages.push({
-          user: user,
-          text: text,
-          time: now
-        });
-        saveMessages(messages);
-        input.value = '';
-        renderMessages();
-        updateIdentityHint();
-        input.focus();
-      }
-      function init() {
-        updateIdentityHint();
-        renderMessages();
 
-        sendBtn.addEventListener('click', sendMessage);
-        input.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            sendMessage();
+  <script>
+    const SUPABASE_URL = 'https://tsizgxzjylnbtrpczeyj.supabase.c';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzaXpneHpqeWxuYnRycGN6ZXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NjcyMzksImV4cCI6MjEwNzM0MzIzOX0.NoQf2rH5Kl6fbohNARIkF6ZLXtiWGcBUXTExzeJS3is';
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const container = document.getElementById('message-container');
+    const input = document.getElementById('msg-input');
+    const sendBtn = document.getElementById('send-btn');
+    const identityHint = document.getElementById('identity-hint');
+    function getCurrentUser() {
+      const nickname = localStorage.getItem('userNickname');
+      return (nickname && nickname.trim() !== '') ? nickname.trim() : 'Anonymous';
+    }
+
+    function updateIdentityHint() {
+      identityHint.textContent = 'Your name:' + getCurrentUser();
+    }
+
+    function renderMessage(msg) {
+      const item = document.createElement('div');
+      item.className = 'message-item';
+
+      const userSpan = document.createElement('span');
+      userSpan.className = 'message-user';
+      const userName = msg.user_name || 'Anonymous';
+      userSpan.textContent = userName;
+      if (userName === 'Anonymous') userSpan.classList.add('anonymous');
+
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'message-time';
+      let timeStr = 'Unknown Time';
+      if (msg.created_at) {
+        try {
+          const date = new Date(msg.created_at);
+          if (!isNaN(date.getTime())) {
+            timeStr = date.toLocaleString('zh-CN', { hour12: false });
           }
+        } catch (e) {}
+      }
+      timeSpan.textContent = timeStr;
+
+      const textDiv = document.createElement('div');
+      textDiv.className = 'message-text';
+      textDiv.textContent = msg.text || '';
+
+      item.appendChild(userSpan);
+      item.appendChild(timeSpan);
+      item.appendChild(textDiv);
+      container.appendChild(item);
+    }
+    async function loadHistory() {
+      const { data, error } = await supabaseClient
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(500);
+
+      container.innerHTML = '';
+
+      if (error) {
+        console.error('default:', error);
+        container.innerHTML = '<div class="empty-tip">Loading Failed,please reflush the page</div>';
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-tip">No messages here</div>';
+        return;
+      }
+
+      data.forEach(renderMessage);
+      container.scrollTop = container.scrollHeight;
+    }
+    function subscribeRealtime() {
+      supabaseClient
+        .channel('public:messages')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload) => {
+            const emptyTip = container.querySelector('.empty-tip');
+            if (emptyTip) emptyTip.remove();
+
+            renderMessage(payload.new);
+            container.scrollTop = container.scrollHeight;
+          }
+        )
+        .subscribe((status) => {
+          console.log('[Realtime] 订阅状态:', status);
         });
+    }
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (text === '') {
+        alert('Can't send an empty message!');
+        return;
       }
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-      } else {
-        init();
+
+      const user = getCurrentUser();
+
+      const { error } = await supabaseClient
+        .from('messages')
+        .insert({ user_name: user, text: text });
+
+      if (error) {
+        console.error('Sending failed:', error);
+        alert('Sending failed：' + error.message);
+        return;
       }
-    })();
+
+      input.value = '';
+      input.focus();
+      updateIdentityHint();
+    }
+
+    // ========== 8. 初始化 ==========
+    function init() {
+      updateIdentityHint();
+      loadHistory();
+      subscribeRealtime();
+
+      sendBtn.addEventListener('click', sendMessage);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 
 </body>
