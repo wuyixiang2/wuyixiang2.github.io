@@ -41,10 +41,24 @@
       color: #6c757d;
       font-weight: normal;
     }
+    .message-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
     .message-time {
       color: #6c757d;
       font-size: 13px;
-      white-space: nowrap;
+    }
+    .delete-link {
+      color: #c92a2a;
+      font-size: 13px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .delete-link:hover {
+      color: #8b0000;
     }
     .message-text {
       width: 100%;
@@ -90,13 +104,15 @@
 
   <script>
     const SUPABASE_URL = 'https://tsizgxzjylnbtrpczeyj.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzaXpneHpqeWxuYnRycGN6ZXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NjcyMzksImV4cCI6MjEwNzM0MzIzOX0.NoQf2rH5Kl6fbohNARIkF6ZLXtiWGcBUXTExzeJS3is';
+    const SUPABASE_ANON_KEY = '你的 anon public key';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const container = document.getElementById('message-container');
     const input = document.getElementById('msg-input');
     const sendBtn = document.getElementById('send-btn');
     const identityHint = document.getElementById('identity-hint');
+    const ADMIN_USER = 'wuyixiang';
     function getCurrentUser() {
       const nickname = localStorage.getItem('userNickname');
       return (nickname && nickname.trim() !== '') ? nickname.trim() : 'Anonymous';
@@ -105,16 +121,17 @@
     function updateIdentityHint() {
       identityHint.textContent = 'Your name:' + getCurrentUser();
     }
-
     function renderMessage(msg) {
       const item = document.createElement('div');
       item.className = 'message-item';
-
+      item.dataset.id = msg.id;  
       const userSpan = document.createElement('span');
       userSpan.className = 'message-user';
       const userName = msg.user_name || 'Anonymous';
       userSpan.textContent = userName;
       if (userName === 'Anonymous') userSpan.classList.add('anonymous');
+      const metaSpan = document.createElement('span');
+      metaSpan.className = 'message-meta';
 
       const timeSpan = document.createElement('span');
       timeSpan.className = 'message-time';
@@ -128,15 +145,42 @@
         } catch (e) {}
       }
       timeSpan.textContent = timeStr;
-
+      metaSpan.appendChild(timeSpan);
+      if (getCurrentUser() === ADMIN_USER) {
+        const delLink = document.createElement('a');
+        delLink.className = 'delete-link';
+        delLink.textContent = '删除';
+        delLink.addEventListener('click', function() {
+          deleteMessage(msg.id);
+        });
+        metaSpan.appendChild(delLink);
+      }
       const textDiv = document.createElement('div');
       textDiv.className = 'message-text';
       textDiv.textContent = msg.text || '';
 
       item.appendChild(userSpan);
-      item.appendChild(timeSpan);
+      item.appendChild(metaSpan);
       item.appendChild(textDiv);
       container.appendChild(item);
+    }
+    async function deleteMessage(id) {
+      if (!confirm('确定删除这条消息吗？')) return;
+      const { error } = await supabaseClient
+        .from('messages')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('删除失败:', error);
+        alert('删除失败：' + error.message);
+        return;
+      }
+      const el = container.querySelector('[data-id="' + id + '"]');
+      if (el) el.remove();
+      if (container.children.length === 0) {
+        container.innerHTML = '<div class="empty-tip">No messages here</div>';
+      }
     }
     async function loadHistory() {
       const { data, error } = await supabaseClient
@@ -144,9 +188,7 @@
         .select('*')
         .order('created_at', { ascending: true })
         .limit(500);
-
       container.innerHTML = '';
-
       if (error) {
         console.error('default:', error);
         container.innerHTML = '<div class="empty-tip">Loading Failed,please reflush the page</div>';
@@ -175,6 +217,19 @@
             container.scrollTop = container.scrollHeight;
           }
         )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'messages' },
+          (payload) => {
+            const id = payload.old && payload.old.id;
+            if (id === undefined) return;
+            const el = container.querySelector('[data-id="' + id + '"]');
+            if (el) el.remove();
+            if (container.children.length === 0) {
+              container.innerHTML = '<div class="empty-tip">No messages here</div>';
+            }
+          }
+        )
         .subscribe((status) => {
           console.log('[Realtime] 订阅状态:', status);
         });
@@ -182,28 +237,22 @@
     async function sendMessage() {
       const text = input.value.trim();
       if (text === '') {
-        alert('Can\'t send an empty message!');
+        alert("Can't send an empty message!");
         return;
       }
-
       const user = getCurrentUser();
-
       const { error } = await supabaseClient
         .from('messages')
         .insert({ user_name: user, text: text });
-
       if (error) {
         console.error('Sending failed:', error);
         alert('Sending failed：' + error.message);
         return;
       }
-
       input.value = '';
       input.focus();
       updateIdentityHint();
     }
-
-    // ========== 8. 初始化 ==========
     function init() {
       updateIdentityHint();
       loadHistory();
@@ -224,6 +273,5 @@
       init();
     }
   </script>
-
 </body>
 </html>
