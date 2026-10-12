@@ -1,34 +1,46 @@
 <!DOCTYPE html>
-
 <html>
-
 <head>
-
   <meta charset="UTF-8">
-
   <title>Login</title>
-
 </head>
-
 <body>
 
   <p><h3>Login</h3><br>
-
   <form id="loginForm">
     Handle:<input type="text" name="user" id="nickname"><br>
-    Password:<input type="password" name="password"><br>
+    Password:<input type="password" name="password" id="password"><br>
     <button type="submit">Login</button>
   </form>
   <br>
   <script>
         const form = document.getElementById('loginForm');
         const nicknameInput = document.getElementById('nickname');
-        form.addEventListener('submit', function(event) {
+        const passwordInput = document.getElementById('password');
+        const PROTECTED_USER = 'wuyixiang';
+        const PROTECTED_PASSWORD_HASH = '77c4b75d4291c7fd65cdc524b810187137f74e61c98be826d8832f31189695f6';
+        async function sha256(str) {
+            const buf = new TextEncoder().encode(str);
+            const hash = await crypto.subtle.digest('SHA-256', buf);
+            return Array.from(new Uint8Array(hash))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+        form.addEventListener('submit', async function(event) {
             event.preventDefault();
             const nickname = nicknameInput.value.trim(); 
             if (nickname === '') {
                 alert('You should fill in your nickname first.');
                 return;
+            }
+            if (nickname === PROTECTED_USER) {
+                const hash = await sha256(passwordInput.value);
+                if (hash !== PROTECTED_PASSWORD_HASH) {
+                    alert('Wrong password.');
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    return;
+                }
             }
             localStorage.setItem('userNickname', nickname);
             window.location.href = '/';
@@ -37,5 +49,4 @@
   No account? 找liruixiong0101</p>
 
 </body>
-
 </html>
