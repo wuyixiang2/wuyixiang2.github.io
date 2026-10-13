@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/paste/">
+  <title>P3099 代码</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="markdown-it.min.js"></script>
+ <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    #mode-switcher {
+      position: fixed;
+      top: 10px;
+      right: 50px;
+      z-index: 9999;
+      user-select: none;  
+      -webkit-user-select: none;
+      -moz-user-select: none;    
+      -ms-user-select: none;   
+    }
+    #mode-switcher button {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    #mode-switcher button.active {
+      background: #0d6efd;
+      color: white;
+      border-color: #0d6efd;
+    }
+    pre {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+      tab-size: 4;
+    }
+    code { font-family: inherit; }
+    #markdown-content {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    #markdown-content pre { border: 1px solid #eee; }
+    #markdown-content blockquote {
+      border-left: 4px solid #ccc;
+      padding-left: 12px;
+      margin: 8px 0;
+      color: #495057;
+    }
+    #markdown-content p {
+      margin: 6px 0;
+    }
+    #markdown-content h1,
+    #markdown-content h2,
+    #markdown-content h3,
+    #markdown-content h4 {
+      margin: 12px 0 6px 0;
+    }
+    #markdown-content ul,
+    #markdown-content ol {
+      margin: 6px 0;
+      padding-left: 24px;
+    }
+    #markdown-content code {
+      background: #f1f3f5;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 0.95em;
+    }
+    #markdown-content pre code {
+      background: transparent;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="mode-switcher">
+    <button data-mode="cpp" class="active">.cpp</button>
+    <button data-mode="markdown">markdown(LaTeX)</button>
+  </div>
+
+  <div id="content"></div>
+
+  <textarea id="rawSource" style="display:none">#include &lt;iostream&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+#include &lt;vector&gt;
+#define int long long
+using namespace std;
+int n,m,q,top;
+struct node
+{
+	int x,y;
+}stk[200005];
+node op,qs;
+bool cmp(node e,node f)
+{
+	if(e.x != f.x)return e.x &lt; f.x;
+	return e.y &lt; f.y;
+}
+inline node jian(node b,node c)
+{
+	b.x -= c.x;b.y -= c.y;
+	return b;
+}
+inline int chazhi(node b,node c,node d)
+{
+	c = jian(c,b);
+	d = jian(d,b);
+	return c.x * d.y - c.y * d.x;
+}
+int mo(node x)//模长（未开根）
+{
+    return x.x * x.x + x.y * x.y;
+}
+bool cmp3(node b,node c)//lower_bound内的函数，根据叉值大小进行排序。注意当叉值为0时需要判断模长。
+{
+    int cha = chazhi(b,c,{0,0});
+    return (cha &gt; 0 || (!cha &amp;&amp; mo(b) &lt; mo(c)));
+}
+vector&lt;node&gt; tu_bao(vector&lt;node&gt;a)//求凸包，这里我用的vector存储点集。
+{
+    top = 0;
+    sort(a.begin(),a.end(),cmp);
+    int w = a.size();
+    vector&lt;node&gt;res;
+    for(int i = 0;i &lt; w;i ++)
+	{
+		while(top &gt; 1 &amp;&amp; chazhi(stk[top - 1],stk[top],a[i]) &lt;= 0)top --;
+		stk[++top] = a[i];
+	}
+	int kat = top;
+	for(int i = w - 2;i &gt;= 0;i --)
+	{
+		while(top &gt; kat &amp;&amp; chazhi(stk[top - 1],stk[top],a[i]) &lt;= 0)top --;
+		stk[++top] = a[i];
+	}
+	for(int i = 1;i &lt; top;i ++)res.push_back(stk[i]);
+	return res;
+}
+vector&lt;node&gt;a[5],midans;
+bool check()
+{
+    int tot = midans.size() - 1;
+    if(midans.size() == 2)//特判
+    {//首先叉积为0，其次要保证在线段上
+        return (chazhi(midans[1],qs,midans[0]) == 0 &amp;&amp; abs(qs.x) &lt;= abs(midans[1].x) &amp;&amp; abs(qs.y) &lt;= abs(midans[1].y) &amp;&amp; qs.x * midans[1].x &gt;= 0 &amp;&amp; qs.y * midans[1].y &gt;= 0);
+    }//判断是否在红边外
+    if(chazhi(qs,midans[1],{0,0}) &gt; 0 || (chazhi(qs,midans[1],{0,0}) == 0 &amp;&amp; mo(midans[1]) &lt; mo(qs)))return 0;
+    if(chazhi(midans[tot],qs,{0,0}) &gt; 0 || (chazhi(midans[tot],qs,{0,0}) == 0 &amp;&amp; mo(midans[tot]) &lt; mo(qs)))return 0;
+    vector&lt;node&gt;::iterator pos = lower_bound(midans.begin() + 1,midans.end(),qs,cmp3);
+    int trpos = distance(midans.begin(),pos) - 1;//计算区域
+    node dw = jian(midans[(trpos + 1) % (tot + 1)],midans[trpos]),dw2 = jian(qs,midans[trpos]);
+    return chazhi(dw2,dw,{0,0}) &lt;= 0;//再次计算叉积
+}
+int cnt;
+void solve()
+{
+    cin &gt;&gt; n;
+    for(int i = 1,x,y;i &lt;= 2 * n;i ++)
+    {
+        cin &gt;&gt; x &gt;&gt; y;
+        int opt = (i &lt;= n ? 1 : -1);
+        a[(i &lt;= n ? 1 : 2)].push_back({x,y});//存在两个凸包里面
+    }
+    midans = tu_bao(a[1]);
+    op = midans[0];
+    for(int i = 0;i &lt; midans.size();i ++)midans[i] = jian(midans[i],op);
+    for(int i = 0;i &lt; a[2].size();i ++)
+    {
+        qs.x = a[2][i].x,qs.y = a[2][i].y;
+        qs = jian(qs,op);
+        cnt += check();
+    }
+    cout &lt;&lt; cnt &lt;&lt; " ";
+    cnt = 0,midans = tu_bao(a[2]);
+    op = midans[0];
+    for(int i = 0;i &lt; midans.size();i ++)midans[i] = jian(midans[i],op);
+    for(int i = 0;i &lt; a[1].size();i ++)//再算一次
+    {
+        qs.x = a[1][i].x,qs.y = a[1][i].y;
+        qs = jian(qs,op);
+        cnt += check();
+    }
+    cout &lt;&lt; cnt;
+}
+signed main()
+{
+    ios::sync_with_stdio(0);
+    cin.tie(0),cout.tie(0);
+    solve();
+}</textarea>
+
+  <script>
+    (function() {
+      var rawText = document.getElementById('rawSource').value;
+      var currentMode = 'cpp';
+      var contentEl = document.getElementById('content');
+      var mathRetries = 0;
+
+      function renderCpp() {
+        contentEl.innerHTML = '';
+        var pre = document.createElement('pre');
+        var codeEl = document.createElement('code');
+        codeEl.className = 'language-cpp';
+        codeEl.textContent = rawText;
+        pre.appendChild(codeEl);
+        contentEl.appendChild(pre);
+        if (typeof hljs !== 'undefined') hljs.highlightAll();
+      }
+
+     function renderMarkdown() {
+        if (typeof markdownit === 'undefined') {
+          contentEl.innerHTML = '<p>markdown-it 未加载成功，请检查 markdown-it.min.js</p>';
+          return;
+        }
+      
+        var text = rawText;
+        var mathStore = [];
+        text = text.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
+          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
+          mathStore.push(match);
+          return key;
+        });
+        text = text.replace(/\$([^$\n]+?)\$/g, function(match) {
+          var key = 'MATHPLACEHOLDER' + mathStore.length + 'END';
+          mathStore.push(match);
+          return key;
+        });
+      
+        var md = markdownit({ html: false, linkify: true, breaks: false });
+        var html = md.render(text);
+        html = html.replace(/MATHPLACEHOLDER(\d+)END/g, function(match, idx) {
+          var formula = mathStore[parseInt(idx, 10)];
+          return formula.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        });
+      
+        contentEl.innerHTML = '<div id="markdown-content">' + html + '</div>';
+      
+        if (typeof hljs !== 'undefined') {
+          document.querySelectorAll('#markdown-content pre code').forEach(function(block) {
+            hljs.highlightElement(block);
+          });
+        }
+      
+        mathRetries = 0;
+        tryMathJax();
+      }
+      function tryMathJax() {
+        if (typeof renderMathInElement === 'function') {
+          try {
+            renderMathInElement(contentEl, {
+              delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+              ],
+              throwOnError: false
+            });
+          } catch (err) {
+            console.error('[KaTeX] error:', err);
+          }
+        } else if (mathRetries < 30) {
+          mathRetries++;
+          setTimeout(tryMathJax, 200);
+        } else {
+          console.warn('[KaTeX] not ready after 6s');
+        }
+      }
+
+      function render() {
+        if (currentMode === 'cpp') renderCpp();
+        else renderMarkdown();
+      }
+
+      document.querySelectorAll('#mode-switcher button').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          currentMode = btn.dataset.mode;
+          document.querySelectorAll('#mode-switcher button').forEach(function(b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          render();
+        });
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
