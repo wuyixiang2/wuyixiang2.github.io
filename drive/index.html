@@ -135,53 +135,31 @@
         return key;
       }
     }
-    async function listFiles() {
+    async function downloadFile(key, displayName) {
+      setStatus('下载中：' + displayName);
+    
       const { data, error } = await supabaseClient
         .storage
         .from(BUCKET)
-        .list('', {
-          limit: 200,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-    
-      fileList.innerHTML = '';
+        .download(key);
     
       if (error) {
-        console.error('列出文件失败:', error);
-        fileList.innerHTML = '<li class="empty-tip">加载失败，请刷新重试</li>';
+        console.error('下载失败:', error);
+        setStatus('下载失败：' + error.message, 'err');
         return;
       }
     
-      const files = (data || []).filter(function(f) {
-        return f.id !== null && f.name;
-      });
+      // data 是 Blob，用 Blob URL 触发浏览器保存
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = displayName || key;   // 保存时用原始中文名
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     
-      if (files.length === 0) {
-        fileList.innerHTML = '<li class="empty-tip">暂无文件</li>';
-        return;
-      }
-    
-      files.forEach(function(f) {
-        // 优先显示原始文件名，没有则回退到存储 key
-        const displayName = (f.metadata && f.metadata.originalName) ? f.metadata.originalName : f.name;
-    
-        const li = document.createElement('li');
-    
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'file-name';
-        nameSpan.textContent = displayName;
-    
-        const dlLink = document.createElement('a');
-        dlLink.className = 'download-link';
-        dlLink.textContent = '下载';
-        dlLink.addEventListener('click', function() {
-          downloadFile(f.name, displayName);   // key 用于下载，displayName 用于保存
-        });
-    
-        li.appendChild(nameSpan);
-        li.appendChild(dlLink);
-        fileList.appendChild(li);
-      });
+      setStatus('已开始下载：' + displayName, 'ok');
     }
     function sanitizeFileName(name) {
       let safe = name.replace(/\s+/g, '_');
