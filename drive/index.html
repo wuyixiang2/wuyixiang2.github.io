@@ -76,6 +76,21 @@
       padding: 20px;
       font-size: 14px;
     }
+    .file-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      white-space: nowrap;
+    }
+    .delete-link {
+      color: #c92a2a;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .delete-link:hover {
+      color: #8b0000;
+    }
   </style>
 </head>
 <body>
@@ -246,6 +261,10 @@
         nameSpan.className = 'file-name';
         nameSpan.textContent = displayName;
     
+        // 操作容器：下载 + 删除
+        const actions = document.createElement('span');
+        actions.className = 'file-actions';
+    
         const dlLink = document.createElement('a');
         dlLink.className = 'download-link';
         dlLink.textContent = '下载';
@@ -253,10 +272,39 @@
           downloadFile(f.name, displayName);
         });
     
+        const delLink = document.createElement('a');
+        delLink.className = 'delete-link';
+        delLink.textContent = '删除';
+        delLink.addEventListener('click', function() {
+          deleteFile(f.name, displayName);
+        });
+    
+        actions.appendChild(dlLink);
+        actions.appendChild(delLink);
+    
         li.appendChild(nameSpan);
-        li.appendChild(dlLink);
+        li.appendChild(actions);
         fileList.appendChild(li);
       });
+    }
+    async function deleteFile(key, displayName) {
+      if (!confirm('确定删除「' + displayName + '」吗？此操作不可撤销。')) return;
+    
+      setStatus('删除中：' + displayName);
+    
+      const { error } = await supabaseClient
+        .storage
+        .from(BUCKET)
+        .remove([key]);
+    
+      if (error) {
+        console.error('删除失败:', error);
+        setStatus('删除失败：' + error.message, 'err');
+        return;
+      }
+    
+      setStatus('已删除：' + displayName, 'ok');
+      listFiles();
     }
     function init() {
       uploadBtn.addEventListener('click', uploadFile);
