@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>drive</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h3 { font-size: 18px; margin-bottom: 12px; }
+    #upload-area {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    #upload-area input[type="file"] {
+      flex: 1;
+      min-width: 200px;
+      font-size: 14px;
+    }
+    button {
+      padding: 6px 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover { background: #e9ecef; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status {
+      font-size: 13px;
+      color: #6c757d;
+      margin-bottom: 12px;
+      min-height: 18px;
+    }
+    #status.ok { color: #0a7c2f; }
+    #status.err { color: #c92a2a; }
+    #file-list {
+      list-style: none;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+    #file-list li {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    #file-list li:last-child { border-bottom: none; }
+    .file-name {
+      word-break: break-all;
+      margin-right: 12px;
+    }
+    .download-link {
+      color: #0d6efd;
+      text-decoration: underline;
+      cursor: pointer;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .empty-tip {
+      color: #6c757d;
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h3>Drive</h3>
+
+  <div id="upload-area">
+    <input type="file" id="fileInput">
+    <button id="uploadBtn">上传</button>
+  </div>
+
+  <div id="status">就绪</div>
+
+  <ul id="file-list"></ul>
+
+  <script>
+    const SUPABASE_URL = 'https://tsizgxzjylnbtrpczeyj.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzaXpneHpqeWxuYnRycGN6ZXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NjcyMzksImV4cCI6MjEwNzM0MzIzOX0.NoQf2rH5Kl6fbohNARIkF6ZLXtiWGcBUXTExzeJS3is';
+    const BUCKET = 'drive';
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const status = document.getElementById('status');
+    const fileList = document.getElementById('file-list');
+
+    function setStatus(msg, type) {
+      status.textContent = msg;
+      status.className = type || '';
+    }
+    async function listFiles() {
+      const { data, error } = await supabaseClient
+        .storage
+        .from(BUCKET)
+        .list('', {
+          limit: 200,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      fileList.innerHTML = '';
+
+      if (error) {
+        console.error('列出文件失败:', error);
+        fileList.innerHTML = '<li class="empty-tip">加载失败，请刷新重试</li>';
+        return;
+      }
+      const files = (data || []).filter(function(f) {
+        return f.id !== null && f.name;
+      });
+
+      if (files.length === 0) {
+        fileList.innerHTML = '<li class="empty-tip">暂无文件</li>';
+        return;
+      }
+
+      files.forEach(function(f) {
+        const li = document.createElement('li');
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-name';
+        nameSpan.textContent = f.name;
+
+        const dlLink = document.createElement('a');
+        dlLink.className = 'download-link';
+        dlLink.textContent = '下载';
+        dlLink.addEventListener('click', function() {
+          downloadFile(f.name);
+        });
+
+        li.appendChild(nameSpan);
+        li.appendChild(dlLink);
+        fileList.appendChild(li);
+      });
+    }
+    async function uploadFile() {
+      const file = fileInput.files[0];
+      if (!file) {
+        setStatus('请先选择文件', 'err');
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      setStatus('上传中...');
+      const { error } = await supabaseClient
+        .storage
+        .from(BUCKET)
+        .upload(file.name, file, { upsert: true });
+
+      uploadBtn.disabled = false;
+      if (error) {
+        console.error('上传失败:', error);
+        setStatus('上传失败：' + error.message, 'err');
+        return;
+      }
+
+      setStatus('上传成功：' + file.name, 'ok');
+      fileInput.value = '';
+      listFiles();
+    }
+    async function downloadFile(name) {
+      setStatus('下载中：' + name);
+
+      const { data, error } = await supabaseClient
+        .storage
+        .from(BUCKET)
+        .download(name);
+
+      if (error) {
+        console.error('下载失败:', error);
+        setStatus('下载失败：' + error.message, 'err');
+        return;
+      }
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setStatus('已开始下载：' + name, 'ok');
+    }
+    function init() {
+      uploadBtn.addEventListener('click', uploadFile);
+      listFiles();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+
+</body>
+</html>
