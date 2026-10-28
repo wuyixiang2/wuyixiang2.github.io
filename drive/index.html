@@ -107,21 +107,33 @@
       status.textContent = msg;
       status.className = type || '';
     }
-    function utf8ToBase64(str) {
+    function utf8ToBase64Url(str) {
       const bytes = new TextEncoder().encode(str);
       let binary = '';
       bytes.forEach(function(b) { binary += String.fromCharCode(b); });
-      return btoa(binary);
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
+    function base64UrlToUtf8(str) {
+      let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+    
     function makeSafeKey(originalName) {
-      const dotIdx = originalName.lastIndexOf('.');
-      let ext = '';
-      if (dotIdx > 0) {
-        ext = originalName.slice(dotIdx).replace(/[^a-zA-Z0-9.]/g, '');
+      return 'v2.' + Date.now() + '.' + utf8ToBase64Url(originalName);
+    }
+    function keyToDisplayName(key) {
+      if (!key || key.indexOf('v2.') !== 0) return key;
+      const parts = key.split('.');
+      if (parts.length < 3) return key;
+      try {
+        return base64UrlToUtf8(parts.slice(2).join('.'));
+      } catch (e) {
+        return key;
       }
-      const ts = Date.now();
-      const rand = Math.random().toString(36).slice(2, 8);
-      return ts + '_' + rand + ext;
     }
     async function listFiles() {
       const { data, error } = await supabaseClient
@@ -194,7 +206,6 @@
       xhr.open('POST', url, true);
       xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_ANON_KEY);
       xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
-      xhr.setRequestHeader('x-metadata', utf8ToBase64(JSON.stringify({ originalName: originalName })));
       xhr.upload.onprogress = function(e) {
         if (e.lengthComputable) {
           const percent = Math.round(e.loaded / e.total * 100);
@@ -222,30 +233,52 @@
       };
       xhr.send(file);
     }
-    async function downloadFile(key, displayName) {
-      setStatus('下载中：' + displayName);
-    
+    async function listFiles() {
       const { data, error } = await supabaseClient
         .storage
         .from(BUCKET)
-        .download(key);
+        .list('', {
+          limit: 200,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+    
+      fileList.innerHTML = '';
     
       if (error) {
-        console.error('下载失败:', error);
-        setStatus('下载失败：' + error.message, 'err');
+        console.error('列出文件失败:', error);
+        fileList.innerHTML = '<li class="empty-tip">加载失败，请刷新重试</li>';
         return;
       }
     
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = displayName || key;   // 保存时用原始中文名
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const files = (data || []).filter(function(f) {
+        return f.id !== null && f.name;
+      });
     
-      setStatus('已开始下载：' + displayName, 'ok');
+      if (files.length === 0) {
+        fileList.innerHTML = '<li class="empty-tip">暂无文件</li>';
+        return;
+      }
+    
+      files.forEach(function(f) {
+        const displayName = keyToDisplayName(f.name);
+    
+        const li = document.createElement('li');
+    
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-name';
+        nameSpan.textContent = displayName;
+    
+        const dlLink = document.createElement('a');
+        dlLink.className = 'download-link';
+        dlLink.textContent = '下载';
+        dlLink.addEventListener('click', function() {
+          downloadFile(f.name, displayName);
+        });
+    
+        li.appendChild(nameSpan);
+        li.appendChild(dlLink);
+        fileList.appendChild(li);
+      });
     }
     function init() {
       uploadBtn.addEventListener('click', uploadFile);
