@@ -157,24 +157,43 @@
         setStatus('请先选择文件', 'err');
         return;
       }
-
       uploadBtn.disabled = true;
-      setStatus('上传中...');
-      const { error } = await supabaseClient
-        .storage
-        .from(BUCKET)
-        .upload(file.name, file, { upsert: true });
-
-      uploadBtn.disabled = false;
-      if (error) {
-        console.error('上传失败:', error);
-        setStatus('上传失败：' + error.message, 'err');
-        return;
-      }
-
-      setStatus('上传成功：' + file.name, 'ok');
-      fileInput.value = '';
-      listFiles();
+      setStatus('上传进度... 0%');
+      const url = SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(file.name);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_ANON_KEY);
+      xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
+      xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+          const percent = Math.round(e.loaded / e.total * 100);
+          setStatus('上传进度... ' + percent + '%');
+        }
+      };
+      // 完成（成功或失败都走这里）
+      xhr.onload = function() {
+        uploadBtn.disabled = false;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          setStatus('上传成功：' + file.name + ' (100%)', 'ok');
+          fileInput.value = '';
+          listFiles();
+        } else {
+          let msg = xhr.responseText || ('HTTP ' + xhr.status);
+          try {
+            const j = JSON.parse(xhr.responseText);
+            msg = j.message || msg;
+          } catch (e) {}
+          setStatus('上传失败：' + msg, 'err');
+        }
+      };
+    
+      // 网络层错误
+      xhr.onerror = function() {
+        uploadBtn.disabled = false;
+        setStatus('上传失败：网络错误', 'err');
+      };
+    
+      xhr.send(file);
     }
     async function downloadFile(name) {
       setStatus('下载中：' + name);
