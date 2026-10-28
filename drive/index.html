@@ -151,15 +151,20 @@
         fileList.appendChild(li);
       });
     }
+    function sanitizeFileName(name) {
+      let safe = name.replace(/\s+/g, '_');
+      safe = safe.replace(/[^a-zA-Z0-9._-]/g, '');
+      return safe || 'unnamed_file';
+    }
     async function uploadFile() {
       const file = fileInput.files[0];
       if (!file) {
         setStatus('请先选择文件', 'err');
         return;
       }
+      const safeName = sanitizeFileName(file.name);
       uploadBtn.disabled = true;
-      setStatus('上传进度... 0%');
-      const url = SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(file.name);
+      const url = SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(safeName);
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url, true);
       xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_ANON_KEY);
@@ -167,16 +172,16 @@
       xhr.upload.onprogress = function(e) {
         if (e.lengthComputable) {
           const percent = Math.round(e.loaded / e.total * 100);
-          setStatus('上传进度... ' + percent + '%');
+          setStatus('上传进度： ' + percent + '%');
         }
       };
-      // 完成（成功或失败都走这里）
       xhr.onload = function() {
         uploadBtn.disabled = false;
+    
         if (xhr.status >= 200 && xhr.status < 300) {
-          setStatus('上传成功：' + file.name + ' (100%)', 'ok');
+          setStatus('上传成功：' + safeName + ' (100%)', 'ok');
           fileInput.value = '';
-          listFiles();
+          listFiles(); // 刷新列表
         } else {
           let msg = xhr.responseText || ('HTTP ' + xhr.status);
           try {
@@ -186,18 +191,14 @@
           setStatus('上传失败：' + msg, 'err');
         }
       };
-    
-      // 网络层错误
       xhr.onerror = function() {
         uploadBtn.disabled = false;
         setStatus('上传失败：网络错误', 'err');
       };
-    
       xhr.send(file);
     }
     async function downloadFile(name) {
       setStatus('下载中：' + name);
-
       const { data, error } = await supabaseClient
         .storage
         .from(BUCKET)
