@@ -107,6 +107,22 @@
       status.textContent = msg;
       status.className = type || '';
     }
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      bytes.forEach(function(b) { binary += String.fromCharCode(b); });
+      return btoa(binary);
+    }
+    function makeSafeKey(originalName) {
+      const dotIdx = originalName.lastIndexOf('.');
+      let ext = '';
+      if (dotIdx > 0) {
+        ext = originalName.slice(dotIdx).replace(/[^a-zA-Z0-9.]/g, '');
+      }
+      const ts = Date.now();
+      const rand = Math.random().toString(36).slice(2, 8);
+      return ts + '_' + rand + ext;
+    }
     async function listFiles() {
       const { data, error } = await supabaseClient
         .storage
@@ -115,37 +131,41 @@
           limit: 200,
           sortBy: { column: 'created_at', order: 'desc' }
         });
-
+    
       fileList.innerHTML = '';
-
+    
       if (error) {
         console.error('列出文件失败:', error);
         fileList.innerHTML = '<li class="empty-tip">加载失败，请刷新重试</li>';
         return;
       }
+    
       const files = (data || []).filter(function(f) {
         return f.id !== null && f.name;
       });
-
+    
       if (files.length === 0) {
         fileList.innerHTML = '<li class="empty-tip">暂无文件</li>';
         return;
       }
-
+    
       files.forEach(function(f) {
+        // 优先显示原始文件名，没有则回退到存储 key
+        const displayName = (f.metadata && f.metadata.originalName) ? f.metadata.originalName : f.name;
+    
         const li = document.createElement('li');
-
+    
         const nameSpan = document.createElement('span');
         nameSpan.className = 'file-name';
-        nameSpan.textContent = f.name;
-
+        nameSpan.textContent = displayName;
+    
         const dlLink = document.createElement('a');
         dlLink.className = 'download-link';
         dlLink.textContent = '下载';
         dlLink.addEventListener('click', function() {
-          downloadFile(f.name);
+          downloadFile(f.name, displayName);   // key 用于下载，displayName 用于保存
         });
-
+    
         li.appendChild(nameSpan);
         li.appendChild(dlLink);
         fileList.appendChild(li);
@@ -162,13 +182,19 @@
         setStatus('请先选择文件', 'err');
         return;
       }
-      const safeName = sanitizeFileName(file.name);
+    
+      const originalName = file.name;
+      const safeKey = makeSafeKey(originalName);
+    
       uploadBtn.disabled = true;
-      const url = SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(safeName);
+      setStatus('上传进度： 0%');
+      const url = SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(safeKey);
+    
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url, true);
       xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_ANON_KEY);
       xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
+      xhr.setRequestHeader('x-metadata', utf8ToBase64(JSON.stringify({ originalName: originalName })));
       xhr.upload.onprogress = function(e) {
         if (e.lengthComputable) {
           const percent = Math.round(e.loaded / e.total * 100);
@@ -177,11 +203,10 @@
       };
       xhr.onload = function() {
         uploadBtn.disabled = false;
-    
         if (xhr.status >= 200 && xhr.status < 300) {
-          setStatus('上传成功：' + safeName + ' (100%)', 'ok');
+          setStatus('上传成功：' + originalName + ' (100%)', 'ok');
           fileInput.value = '';
-          listFiles(); // 刷新列表
+          listFiles();
         } else {
           let msg = xhr.responseText || ('HTTP ' + xhr.status);
           try {
@@ -197,28 +222,30 @@
       };
       xhr.send(file);
     }
-    async function downloadFile(name) {
-      setStatus('下载中：' + name);
+    async function downloadFile(key, displayName) {
+      setStatus('下载中：' + displayName);
+    
       const { data, error } = await supabaseClient
         .storage
         .from(BUCKET)
-        .download(name);
-
+        .download(key);
+    
       if (error) {
         console.error('下载失败:', error);
         setStatus('下载失败：' + error.message, 'err');
         return;
       }
+    
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = name;
+      a.download = displayName || key;   // 保存时用原始中文名
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      setStatus('已开始下载：' + name, 'ok');
+    
+      setStatus('已开始下载：' + displayName, 'ok');
     }
     function init() {
       uploadBtn.addEventListener('click', uploadFile);
