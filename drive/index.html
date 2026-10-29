@@ -14,7 +14,12 @@
       max-width: 800px;
       margin: 0 auto;
     }
-    h3 { font-size: 18px; margin-bottom: 12px; }
+    h3 { font-size: 18px; margin-bottom: 4px; }
+    #identity-hint {
+      font-size: 13px;
+      color: #495057;
+      margin-bottom: 12px;
+    }
     #upload-area {
       display: flex;
       gap: 8px;
@@ -63,24 +68,17 @@
       word-break: break-all;
       margin-right: 12px;
     }
-    .download-link {
-      color: #0d6efd;
-      text-decoration: underline;
-      cursor: pointer;
-      white-space: nowrap;
-      font-size: 13px;
-    }
-    .empty-tip {
-      color: #6c757d;
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-    }
     .file-actions {
       display: flex;
       gap: 10px;
       align-items: center;
       white-space: nowrap;
+    }
+    .download-link {
+      color: #0d6efd;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 13px;
     }
     .delete-link {
       color: #c92a2a;
@@ -88,14 +86,19 @@
       cursor: pointer;
       font-size: 13px;
     }
-    .delete-link:hover {
-      color: #8b0000;
+    .delete-link:hover { color: #8b0000; }
+    .empty-tip {
+      color: #6c757d;
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 
-  <h3>网盘</h3>
+  <h3>Drive</h3>
+  <div id="identity-hint"></div>
 
   <div id="upload-area">
     <input type="file" id="fileInput">
@@ -111,17 +114,36 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzaXpneHpqeWxuYnRycGN6ZXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NjcyMzksImV4cCI6MjEwNzM0MzIzOX0.NoQf2rH5Kl6fbohNARIkF6ZLXtiWGcBUXTExzeJS3is';
     const BUCKET = 'drive';
 
+    // 匿名标记
+    const ANON_MARKER = '__anon__';
+
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const status = document.getElementById('status');
     const fileList = document.getElementById('file-list');
+    const identityHint = document.getElementById('identity-hint');
 
     function setStatus(msg, type) {
       status.textContent = msg;
       status.className = type || '';
     }
+
+    // ========== 当前用户 ==========
+    function getCurrentUser() {
+      const nickname = localStorage.getItem('userNickname');
+      return (nickname && nickname.trim() !== '') ? nickname.trim() : ANON_MARKER;
+    }
+
+    function updateIdentityHint() {
+      const u = getCurrentUser();
+      identityHint.textContent = (u === ANON_MARKER)
+        ? '当前身份：匿名（仅显示匿名文件）'
+        : '当前身份：' + u + '（仅显示你自己上传的文件）';
+    }
+
+    // ========== base64url 编解码 ==========
     function utf8ToBase64Url(str) {
       const bytes = new TextEncoder().encode(str);
       let binary = '';
@@ -136,50 +158,149 @@
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       return new TextDecoder().decode(bytes);
     }
-    
+
+    // ========== key 生成与解析 ==========
+    // 新格式：v2.<ts>.<b64user>.<b64name>
     function makeSafeKey(originalName) {
-      return 'v2.' + Date.now() + '.' + utf8ToBase64Url(originalName);
+      const user = getCurrentUser();
+      return 'v2.' + Date.now() + '.' + utf8ToBase64Url(user) + '.' + utf8ToBase64Url(originalName);
     }
-    function keyToDisplayName(key) {
-      if (!key || key.indexOf('v2.') !== 0) return key;
-      const parts = key.split('.');
-      if (parts.length < 3) return key;
-      try {
-        return base64UrlToUtf8(parts.slice(2).join('.'));
-      } catch (e) {
-        return key;
+
+    // 解析 key，返回 { user, name }
+    function parseKey(key) {
+      if (!key) return { user: ANON_MARKER, name: '' };
+
+      if (key.indexOf('v2.') === 0) {
+        const parts = key.split('.');
+        // 新格式：4 段及以上
+        if (parts.length >= 4) {
+          try {
+            return {
+              user: base64UrlToUtf8(parts[2]),
+              name: base64UrlToUtf8(parts.slice(3).join('.'))
+            };
+          } catch (e) {}
+        }
+        // 旧 v2 格式：3 段，视为匿名
+        if (parts.length === 3) {
+          try {
+            return {
+              user: ANON_MARKER,
+              name: base64UrlToUtf8(parts.slice(2).join('.'))
+            };
+          } catch (e) {}
+        }
       }
+      // 更早的格式，原样作为名字，视为匿名
+      return { user: ANON_MARKER, name: key };
     }
+
+    // ========== 下载 ==========
     async function downloadFile(key, displayName) {
       setStatus('下载中：' + displayName);
-    
+
       const { data, error } = await supabaseClient
         .storage
         .from(BUCKET)
         .download(key);
-    
+
       if (error) {
         console.error('下载失败:', error);
         setStatus('下载失败：' + error.message, 'err');
         return;
       }
-    
-      // data 是 Blob，用 Blob URL 触发浏览器保存
+
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = displayName || key;   // 保存时用原始中文名
+      a.download = displayName || key;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    
+
       setStatus('已开始下载：' + displayName, 'ok');
     }
-    function sanitizeFileName(name) {
-      let safe = name.replace(/\s+/g, '_');
-      safe = safe.replace(/[^a-zA-Z0-9._-]/g, '');
-      return safe || 'unnamed_file';
+    async function deleteFile(key, displayName) {
+      if (!confirm('确定删除「' + displayName + '」吗？此操作不可撤销。')) return;
+
+      setStatus('删除中：' + displayName);
+
+      const { error } = await supabaseClient
+        .storage
+        .from(BUCKET)
+        .remove([key]);
+
+      if (error) {
+        console.error('删除失败:', error);
+        setStatus('删除失败：' + error.message, 'err');
+        return;
+      }
+      setStatus('已删除：' + displayName, 'ok');
+      listFiles();
+    }
+    async function listFiles() {
+      const { data, error } = await supabaseClient
+        .storage
+        .from(BUCKET)
+        .list('', {
+          limit: 500,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      fileList.innerHTML = '';
+
+      if (error) {
+        console.error('列出文件失败:', error);
+        fileList.innerHTML = '<li class="empty-tip">加载失败，请刷新重试</li>';
+        return;
+      }
+      const currentUser = getCurrentUser();
+      const visible = (data || [])
+        .filter(function(f) { return f.id !== null && f.name; })
+        .map(function(f) {
+          const info = parseKey(f.name);
+          return { key: f.name, user: info.user, name: info.name };
+        })
+        .filter(function(item) {
+          return item.user === currentUser;
+        });
+
+      if (visible.length === 0) {
+        fileList.innerHTML = '<li class="empty-tip">暂无文件</li>';
+        return;
+      }
+
+      visible.forEach(function(item) {
+        const li = document.createElement('li');
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-name';
+        nameSpan.textContent = item.name;
+
+        const actions = document.createElement('span');
+        actions.className = 'file-actions';
+
+        const dlLink = document.createElement('a');
+        dlLink.className = 'download-link';
+        dlLink.textContent = '下载';
+        dlLink.addEventListener('click', function() {
+          downloadFile(item.key, item.name);
+        });
+
+        const delLink = document.createElement('a');
+        delLink.className = 'delete-link';
+        delLink.textContent = '删除';
+        delLink.addEventListener('click', function() {
+          deleteFile(item.key, item.name);
+        });
+
+        actions.appendChild(dlLink);
+        actions.appendChild(delLink);
+        li.appendChild(nameSpan);
+        li.appendChild(actions);
+        fileList.appendChild(li);
+      });
     }
     async function uploadFile() {
       const file = fileInput.files[0];
@@ -187,18 +308,16 @@
         setStatus('请先选择文件', 'err');
         return;
       }
-    
       const originalName = file.name;
       const safeKey = makeSafeKey(originalName);
-    
       uploadBtn.disabled = true;
       setStatus('上传进度： 0%');
       const url = SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(safeKey);
-    
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url, true);
       xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_ANON_KEY);
       xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
+
       xhr.upload.onprogress = function(e) {
         if (e.lengthComputable) {
           const percent = Math.round(e.loaded / e.total * 100);
@@ -226,91 +345,17 @@
       };
       xhr.send(file);
     }
-    async function listFiles() {
-      const { data, error } = await supabaseClient
-        .storage
-        .from(BUCKET)
-        .list('', {
-          limit: 200,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-    
-      fileList.innerHTML = '';
-    
-      if (error) {
-        console.error('列出文件失败:', error);
-        fileList.innerHTML = '<li class="empty-tip">加载失败，请刷新重试</li>';
-        return;
-      }
-    
-      const files = (data || []).filter(function(f) {
-        return f.id !== null && f.name;
-      });
-    
-      if (files.length === 0) {
-        fileList.innerHTML = '<li class="empty-tip">暂无文件</li>';
-        return;
-      }
-    
-      files.forEach(function(f) {
-        const displayName = keyToDisplayName(f.name);
-    
-        const li = document.createElement('li');
-    
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'file-name';
-        nameSpan.textContent = displayName;
-    
-        // 操作容器：下载 + 删除
-        const actions = document.createElement('span');
-        actions.className = 'file-actions';
-    
-        const dlLink = document.createElement('a');
-        dlLink.className = 'download-link';
-        dlLink.textContent = '下载';
-        dlLink.addEventListener('click', function() {
-          downloadFile(f.name, displayName);
-        });
-    
-        const delLink = document.createElement('a');
-        delLink.className = 'delete-link';
-        delLink.textContent = '删除';
-        delLink.addEventListener('click', function() {
-          deleteFile(f.name, displayName);
-        });
-    
-        actions.appendChild(dlLink);
-        actions.appendChild(delLink);
-    
-        li.appendChild(nameSpan);
-        li.appendChild(actions);
-        fileList.appendChild(li);
-      });
-    }
-    async function deleteFile(key, displayName) {
-      if (!confirm('确定删除「' + displayName + '」吗？此操作不可撤销。')) return;
-    
-      setStatus('删除中：' + displayName);
-    
-      const { error } = await supabaseClient
-        .storage
-        .from(BUCKET)
-        .remove([key]);
-    
-      if (error) {
-        console.error('删除失败:', error);
-        setStatus('删除失败：' + error.message, 'err');
-        return;
-      }
-    
-      setStatus('已删除：' + displayName, 'ok');
-      listFiles();
-    }
     function init() {
-      uploadBtn.addEventListener('click', uploadFile);
+      updateIdentityHint();
       listFiles();
+      uploadBtn.addEventListener('click', uploadFile);
+      window.addEventListener('storage', function(e) {
+        if (e.key === 'userNickname') {
+          updateIdentityHint();
+          listFiles();
+        }
+      });
     }
-
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
     } else {
