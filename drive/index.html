@@ -139,7 +139,7 @@
     function updateIdentityHint() {
       const u = getCurrentUser();
       identityHint.textContent = (u === ANON_MARKER)
-        ? '当前身份：匿名（仅显示匿名文件）'
+        ? '当前身份：Anonymous（仅显示匿名文件）'
         : '当前身份：' + u + '（仅显示你自己上传的文件）';
     }
 
